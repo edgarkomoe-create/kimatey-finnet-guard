@@ -1,0 +1,53 @@
+{
+  "model": "KNN_reduit",
+  "accuracy": 0.988,
+  "precision_macro": 0.9766,
+  "recall_macro": 0.9918,
+  "f1_macro": 0.9838,
+  "auc_macro": 0.9982,
+  "auc_per_class": {
+    "Normal": 0.9965,
+    "Scan de Ports": 0.9963,
+    "DDoS": 1.0,
+    "Infiltration/Brute-Force": 1.0
+  },
+  "classification_report": {
+    "Normal": {
+      "precision": 0.9973031283710896,
+      "recall": 0.9866595517609391,
+      "f1-score": 0.9919527896995708,
+      "support": 7496.0
+    },
+    "Scan de Ports": {
+      "precision": 0.9090909090909091,
+      "recall": 0.9803921568627451,
+      "f1-score": 0.9433962264150944,
+      "support": 1020.0
+    },
+    "DDoS": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 988.0
+    },
+    "Infiltration/Brute-Force": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 496.0
+    },
+    "accuracy": 0.988,
+    "macro avg": {
+      "precision": 0.9765985093654996,
+      "recall": 0.9917629271559211,
+      "f1-score": 0.9838372540286663,
+      "support": 10000.0
+    },
+    "weighted avg": {
+      "precision": 0.9887056977542416,
+      "recall": 0.988,
+      "f1-score": 0.988194226253138,
+      "support": 10000.0
+    }
+  }
+}

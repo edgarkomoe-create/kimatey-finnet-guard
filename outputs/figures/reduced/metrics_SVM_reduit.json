@@ -1,0 +1,53 @@
+{
+  "model": "SVM_reduit",
+  "accuracy": 0.9889,
+  "precision_macro": 0.9755,
+  "recall_macro": 0.9963,
+  "f1_macro": 0.9852,
+  "auc_macro": 0.9982,
+  "auc_per_class": {
+    "Normal": 0.9977,
+    "Scan de Ports": 0.9952,
+    "DDoS": 1.0,
+    "Infiltration/Brute-Force": 1.0
+  },
+  "classification_report": {
+    "Normal": {
+      "precision": 1.0,
+      "recall": 0.9851921024546425,
+      "f1-score": 0.9925408238693636,
+      "support": 7496.0
+    },
+    "Scan de Ports": {
+      "precision": 0.9018567639257294,
+      "recall": 1.0,
+      "f1-score": 0.9483960948396095,
+      "support": 1020.0
+    },
+    "DDoS": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 988.0
+    },
+    "Infiltration/Brute-Force": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 496.0
+    },
+    "accuracy": 0.9889,
+    "macro avg": {
+      "precision": 0.9754641909814323,
+      "recall": 0.9962980256136607,
+      "f1-score": 0.9852342296772433,
+      "support": 10000.0
+    },
+    "weighted avg": {
+      "precision": 0.9899893899204244,
+      "recall": 0.9889,
+      "f1-score": 0.9891450032461151,
+      "support": 10000.0
+    }
+  }
+}

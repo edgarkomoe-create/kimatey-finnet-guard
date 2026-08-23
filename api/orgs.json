@@ -1,0 +1,14 @@
+[
+  {
+    "org_id": "kimatey_demo_bank",
+    "org_name": "Kimatey Demo Bank (fintech)",
+    "salt": "1625a4e182b4e42f",
+    "password_hash": "74575f3e8995ed782d0853eea5be380034f4fdac5ba6c8fa537b1272483d13e3"
+  },
+  {
+    "org_id": "moov_agents_demo",
+    "org_name": "Moov Agents Network (agregateur mobile money, demo)",
+    "salt": "8d9ca3bdf5be4d58",
+    "password_hash": "11ff363b605c20be97cf317260cf199bbffad4ef85ddbc21319f5ba25995f12d"
+  }
+]

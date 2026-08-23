@@ -1,0 +1,78 @@
+{
+  "n_train": 40000,
+  "n_test": 10000,
+  "missing_values_imputed_train": 67,
+  "missing_values_imputed_test": 13,
+  "medians_used_for_imputation": {
+    "Duree_Connexion": 31656.255,
+    "Octets_Source_Vers_Dest": 2800.16,
+    "Octets_Dest_Vers_Source": 2924.965,
+    "Taux_Paquets_Secondes": 90.37,
+    "Fenetre_TCP_Moyenne": 8192.0,
+    "Ports_Dest_Distincts": 2.0,
+    "Connexions_Simultanees": 5.0,
+    "Taux_Erreur_CheckSum": 0.026,
+    "Frequence_SYN_Flags": 0.11
+  },
+  "iqr_bounds": {
+    "Duree_Connexion": [
+      -66003.974,
+      146424.376
+    ],
+    "Octets_Source_Vers_Dest": [
+      -3343.833,
+      9747.708
+    ],
+    "Octets_Dest_Vers_Source": [
+      -3187.221,
+      9663.649
+    ],
+    "Taux_Paquets_Secondes": [
+      -82.97,
+      264.71
+    ],
+    "Fenetre_TCP_Moyenne": [
+      -19456.0,
+      37888.0
+    ],
+    "Ports_Dest_Distincts": [
+      -2.0,
+      6.0
+    ],
+    "Connexions_Simultanees": [
+      -1.5,
+      10.5
+    ],
+    "Taux_Erreur_CheckSum": [
+      -0.026,
+      0.079
+    ],
+    "Frequence_SYN_Flags": [
+      -0.111,
+      0.332
+    ]
+  },
+  "n_outliers_clipped_per_feature_train": {
+    "Duree_Connexion": 2021,
+    "Octets_Source_Vers_Dest": 4335,
+    "Octets_Dest_Vers_Source": 1369,
+    "Taux_Paquets_Secondes": 4210,
+    "Fenetre_TCP_Moyenne": 6672,
+    "Ports_Dest_Distincts": 4263,
+    "Connexions_Simultanees": 582,
+    "Taux_Erreur_CheckSum": 1983,
+    "Frequence_SYN_Flags": 3952
+  },
+  "class_distribution_train": {
+    "0": 29984,
+    "1": 4081,
+    "2": 3952,
+    "3": 1983
+  },
+  "class_distribution_test": {
+    "0": 7496,
+    "1": 1020,
+    "2": 988,
+    "3": 496
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "model": "Arbre_Decision_optimise",
+  "accuracy": 0.9904,
+  "precision_macro": 0.9785,
+  "recall_macro": 0.9968,
+  "f1_macro": 0.9872,
+  "auc_macro": 0.9992,
+  "auc_per_class": {
+    "Normal": 0.9989,
+    "Scan de Ports": 0.9978,
+    "DDoS": 1.0,
+    "Infiltration/Brute-Force": 1.0
+  },
+  "classification_report": {
+    "Normal": {
+      "precision": 1.0,
+      "recall": 0.9871931696905016,
+      "f1-score": 0.9935553168635876,
+      "support": 7496.0
+    },
+    "Scan de Ports": {
+      "precision": 0.9139784946236559,
+      "recall": 1.0,
+      "f1-score": 0.9550561797752809,
+      "support": 1020.0
+    },
+    "DDoS": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 988.0
+    },
+    "Infiltration/Brute-Force": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 496.0
+    },
+    "accuracy": 0.9904,
+    "macro avg": {
+      "precision": 0.978494623655914,
+      "recall": 0.9967982924226254,
+      "f1-score": 0.9871528741597171,
+      "support": 10000.0
+    },
+    "weighted avg": {
+      "precision": 0.9912258064516128,
+      "recall": 0.9904,
+      "f1-score": 0.990584795858024,
+      "support": 10000.0
+    }
+  }
+}

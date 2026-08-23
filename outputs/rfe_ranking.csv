@@ -1,0 +1,10 @@
+,rang
+Octets_Source_Vers_Dest,1
+Taux_Paquets_Secondes,1
+Taux_Erreur_CheckSum,1
+Ports_Dest_Distincts,1
+Frequence_SYN_Flags,1
+Duree_Connexion,2
+Connexions_Simultanees,3
+Octets_Dest_Vers_Source,4
+Fenetre_TCP_Moyenne,5

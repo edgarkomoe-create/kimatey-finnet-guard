@@ -1,0 +1,53 @@
+{
+  "model": "Naive_Bayes_Gaussien_reduit",
+  "accuracy": 0.9872,
+  "precision_macro": 0.9721,
+  "recall_macro": 0.9957,
+  "f1_macro": 0.9831,
+  "auc_macro": 0.9992,
+  "auc_per_class": {
+    "Normal": 0.9989,
+    "Scan de Ports": 0.9978,
+    "DDoS": 1.0,
+    "Infiltration/Brute-Force": 1.0
+  },
+  "classification_report": {
+    "Normal": {
+      "precision": 1.0,
+      "recall": 0.9829242262540021,
+      "f1-score": 0.9913885898815931,
+      "support": 7496.0
+    },
+    "Scan de Ports": {
+      "precision": 0.8885017421602788,
+      "recall": 1.0,
+      "f1-score": 0.940959409594096,
+      "support": 1020.0
+    },
+    "DDoS": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 988.0
+    },
+    "Infiltration/Brute-Force": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 496.0
+    },
+    "accuracy": 0.9872,
+    "macro avg": {
+      "precision": 0.9721254355400697,
+      "recall": 0.9957310565635005,
+      "f1-score": 0.9830869998689222,
+      "support": 10000.0
+    },
+    "weighted avg": {
+      "precision": 0.9886271777003485,
+      "recall": 0.9872,
+      "f1-score": 0.98752274675384,
+      "support": 10000.0
+    }
+  }
+}

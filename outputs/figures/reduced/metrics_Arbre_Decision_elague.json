@@ -1,0 +1,53 @@
+{
+  "model": "Arbre_Decision_elague",
+  "accuracy": 0.9871,
+  "precision_macro": 0.9719,
+  "recall_macro": 0.9957,
+  "f1_macro": 0.983,
+  "auc_macro": 0.9989,
+  "auc_per_class": {
+    "Normal": 0.9985,
+    "Scan de Ports": 0.997,
+    "DDoS": 1.0,
+    "Infiltration/Brute-Force": 1.0
+  },
+  "classification_report": {
+    "Normal": {
+      "precision": 1.0,
+      "recall": 0.9827908217716115,
+      "f1-score": 0.9913207293278611,
+      "support": 7496.0
+    },
+    "Scan de Ports": {
+      "precision": 0.8877284595300261,
+      "recall": 1.0,
+      "f1-score": 0.9405255878284924,
+      "support": 1020.0
+    },
+    "DDoS": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 988.0
+    },
+    "Infiltration/Brute-Force": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 496.0
+    },
+    "accuracy": 0.9871,
+    "macro avg": {
+      "precision": 0.9719321148825065,
+      "recall": 0.9956977054429028,
+      "f1-score": 0.9829615792890883,
+      "support": 10000.0
+    },
+    "weighted avg": {
+      "precision": 0.9885483028720626,
+      "recall": 0.9871,
+      "f1-score": 0.987427628662671,
+      "support": 10000.0
+    }
+  }
+}

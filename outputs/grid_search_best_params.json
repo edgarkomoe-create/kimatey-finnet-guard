@@ -1,0 +1,37 @@
+{
+  "Regression_Logistique": {
+    "best_params": {
+      "C": 0.1
+    },
+    "cv_score": 0.9911
+  },
+  "KNN": {
+    "best_params": {
+      "metric": "manhattan",
+      "n_neighbors": 11,
+      "weights": "uniform"
+    },
+    "cv_score": 0.9902
+  },
+  "Naive_Bayes_Gaussien": {
+    "best_params": {
+      "var_smoothing": 0.01
+    },
+    "cv_score": 0.9867
+  },
+  "SVM": {
+    "best_params": {
+      "C": 10,
+      "gamma": 0.1
+    },
+    "cv_score": 0.9906
+  },
+  "Arbre_Decision": {
+    "best_params": {
+      "ccp_alpha": 0.0,
+      "max_depth": 5,
+      "min_samples_leaf": 1
+    },
+    "cv_score": 0.9914
+  }
+}

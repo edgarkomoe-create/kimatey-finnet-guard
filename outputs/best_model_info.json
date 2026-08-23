@@ -1,0 +1,13 @@
+{
+  "name": "Arbre_Decision_optimise",
+  "accuracy": 0.9904,
+  "f1_macro": 0.9872,
+  "auc_macro": 0.9992,
+  "features_used": [
+    "Octets_Source_Vers_Dest",
+    "Taux_Paquets_Secondes",
+    "Ports_Dest_Distincts",
+    "Taux_Erreur_CheckSum",
+    "Frequence_SYN_Flags"
+  ]
+}

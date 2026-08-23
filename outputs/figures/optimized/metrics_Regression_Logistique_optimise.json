@@ -1,0 +1,53 @@
+{
+  "model": "Regression_Logistique_optimise",
+  "accuracy": 0.9902,
+  "precision_macro": 0.9781,
+  "recall_macro": 0.9967,
+  "f1_macro": 0.9869,
+  "auc_macro": 0.9992,
+  "auc_per_class": {
+    "Normal": 0.9989,
+    "Scan de Ports": 0.9978,
+    "DDoS": 1.0,
+    "Infiltration/Brute-Force": 1.0
+  },
+  "classification_report": {
+    "Normal": {
+      "precision": 1.0,
+      "recall": 0.9869263607257204,
+      "f1-score": 0.9934201691956492,
+      "support": 7496.0
+    },
+    "Scan de Ports": {
+      "precision": 0.9123434704830053,
+      "recall": 1.0,
+      "f1-score": 0.9541627689429373,
+      "support": 1020.0
+    },
+    "DDoS": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 988.0
+    },
+    "Infiltration/Brute-Force": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 496.0
+    },
+    "accuracy": 0.9902,
+    "macro avg": {
+      "precision": 0.9780858676207513,
+      "recall": 0.9967315901814301,
+      "f1-score": 0.9868957345346466,
+      "support": 10000.0
+    },
+    "weighted avg": {
+      "precision": 0.9910590339892665,
+      "recall": 0.9902,
+      "f1-score": 0.9903923612612383,
+      "support": 10000.0
+    }
+  }
+}

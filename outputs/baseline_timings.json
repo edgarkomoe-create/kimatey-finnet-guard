@@ -1,0 +1,7 @@
+{
+  "Regression_Logistique": 0.32,
+  "KNN": 0.07,
+  "Naive_Bayes_Gaussien": 0.07,
+  "SVM": 1.55,
+  "Arbre_Decision": 0.13
+}

@@ -1,0 +1,157 @@
+{
+  "shape": [
+    50000,
+    10
+  ],
+  "dtypes": {
+    "Duree_Connexion": "float64",
+    "Octets_Source_Vers_Dest": "float64",
+    "Octets_Dest_Vers_Source": "float64",
+    "Taux_Paquets_Secondes": "float64",
+    "Fenetre_TCP_Moyenne": "int64",
+    "Ports_Dest_Distincts": "int64",
+    "Connexions_Simultanees": "int64",
+    "Taux_Erreur_CheckSum": "float64",
+    "Frequence_SYN_Flags": "float64",
+    "Statut_Menace": "int64"
+  },
+  "missing_values": {
+    "Duree_Connexion": 50,
+    "Octets_Source_Vers_Dest": 0,
+    "Octets_Dest_Vers_Source": 0,
+    "Taux_Paquets_Secondes": 30,
+    "Fenetre_TCP_Moyenne": 0,
+    "Ports_Dest_Distincts": 0,
+    "Connexions_Simultanees": 0,
+    "Taux_Erreur_CheckSum": 0,
+    "Frequence_SYN_Flags": 0,
+    "Statut_Menace": 0
+  },
+  "missing_pct": {
+    "Duree_Connexion": 0.1,
+    "Octets_Source_Vers_Dest": 0.0,
+    "Octets_Dest_Vers_Source": 0.0,
+    "Taux_Paquets_Secondes": 0.06,
+    "Fenetre_TCP_Moyenne": 0.0,
+    "Ports_Dest_Distincts": 0.0,
+    "Connexions_Simultanees": 0.0,
+    "Taux_Erreur_CheckSum": 0.0,
+    "Frequence_SYN_Flags": 0.0,
+    "Statut_Menace": 0.0
+  },
+  "duplicates": 0,
+  "class_distribution": {
+    "0": 37480,
+    "1": 5101,
+    "2": 4940,
+    "3": 2479
+  },
+  "class_distribution_pct": {
+    "0": 74.96,
+    "1": 10.2,
+    "2": 9.88,
+    "3": 4.96
+  },
+  "describe": {
+    "Duree_Connexion": {
+      "count": 49950.0,
+      "mean": 48345.104,
+      "std": 49255.539,
+      "min": 0.94,
+      "25%": 13741.855,
+      "50%": 31793.32,
+      "75%": 66857.062,
+      "max": 489192.46
+    },
+    "Octets_Source_Vers_Dest": {
+      "count": 50000.0,
+      "mean": 8143.26,
+      "std": 17705.739,
+      "min": 8.63,
+      "25%": 1563.238,
+      "50%": 2793.47,
+      "75%": 4820.775,
+      "max": 99978.44
+    },
+    "Octets_Dest_Vers_Source": {
+      "count": 50000.0,
+      "mean": 3574.009,
+      "std": 2666.029,
+      "min": 2.06,
+      "25%": 1625.792,
+      "50%": 2922.82,
+      "75%": 4843.76,
+      "max": 28216.89
+    },
+    "Taux_Paquets_Secondes": {
+      "count": 49970.0,
+      "mean": 136.404,
+      "std": 175.917,
+      "min": 0.5,
+      "25%": 47.23,
+      "50%": 90.43,
+      "75%": 134.32,
+      "max": 999.97
+    },
+    "Fenetre_TCP_Moyenne": {
+      "count": 50000.0,
+      "mean": 16177.805,
+      "std": 22610.894,
+      "min": 1024.0,
+      "25%": 2048.0,
+      "50%": 8192.0,
+      "75%": 16384.0,
+      "max": 65535.0
+    },
+    "Ports_Dest_Distincts": {
+      "count": 50000.0,
+      "mean": 12.984,
+      "std": 36.583,
+      "min": 0.0,
+      "25%": 1.0,
+      "50%": 2.0,
+      "75%": 3.0,
+      "max": 200.0
+    },
+    "Connexions_Simultanees": {
+      "count": 50000.0,
+      "mean": 5.006,
+      "std": 2.242,
+      "min": 0.0,
+      "25%": 3.0,
+      "50%": 5.0,
+      "75%": 6.0,
+      "max": 16.0
+    },
+    "Taux_Erreur_CheckSum": {
+      "count": 50000.0,
+      "mean": 0.036,
+      "std": 0.054,
+      "min": 0.0,
+      "25%": 0.013,
+      "50%": 0.026,
+      "75%": 0.04,
+      "max": 0.4
+    },
+    "Frequence_SYN_Flags": {
+      "count": 50000.0,
+      "mean": 0.174,
+      "std": 0.232,
+      "min": 0.0,
+      "25%": 0.055,
+      "50%": 0.11,
+      "75%": 0.166,
+      "max": 1.0
+    },
+    "Statut_Menace": {
+      "count": 50000.0,
+      "mean": 0.448,
+      "std": 0.862,
+      "min": 0.0,
+      "25%": 0.0,
+      "50%": 0.0,
+      "75%": 1.0,
+      "max": 3.0
+    }
+  }
+}

@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kimatey FinNet Guard - Espace Grand Public</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<script src="config.js"></script>
+<div class="page">
+  <div class="header">
+    <div class="header-top">
+      <div class="header-title">
+        <span class="shield">🛡️</span>
+        <div>
+          <h1>Kimatey FinNet Guard</h1>
+          <p>Securise l'infrastructure reseau des fintechs, agregateurs mobile money, institutions de
+             microfinance et administrations publiques - et sensibilise directement les citoyens contre
+             les arnaques mobile money.</p>
+        </div>
+      </div>
+      <div class="live-pill"><span class="live-dot"></span>Surveillance active</div>
+    </div>
+  </div>
+
+  <a class="back-link" href="index.html">← Retour à l'accueil</a>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="assistant">🎖️ Lieutenant Cyber</button>
+    <button class="tab-btn" data-tab="sensibilisation">🎮 Sensibilisation</button>
+  </div>
+
+  <!-- ============================== Onglet Assistant ============================== -->
+  <div class="tab-panel active" id="panel-assistant">
+    <h2>🎖️ Lieutenant Cyber - l'IA de Kimatey FinNet Guard</h2>
+    <p class="hint">
+      Posez une question en langage courant sur une alerte, une menace, ou un message suspect reçu par
+      mobile money. Cet assistant explique et sensibilise ; il ne remplace pas la détection automatique
+      du tableau de bord de l'Espace Organisation.
+    </p>
+    <div class="chat-box" id="chat-box"></div>
+    <div class="chat-input-row">
+      <input type="text" id="chat-input" placeholder="Écrivez votre question ici..." />
+      <button class="btn" id="chat-send">Envoyer</button>
+    </div>
+    <p class="hint">🔊 Les réponses de l'assistant sont lues à voix haute automatiquement (synthèse vocale du navigateur).</p>
+  </div>
+
+  <!-- ============================== Onglet Sensibilisation ============================== -->
+  <div class="tab-panel" id="panel-sensibilisation">
+    <h2>🎮 Sensibilisation ludique &amp; vigilance collective</h2>
+    <p class="hint">
+      Deux façons de participer : tester vos réflexes face à des situations réelles, et aider à repérer de
+      nouvelles techniques d'arnaque - sans jamais partager d'information personnelle.
+    </p>
+
+    <h3>🧠 Jeu de vigilance : sauriez-vous repérer le piège ?</h3>
+    <p class="no-value-note">
+      Mécanique de gamification inspirée de l'Espace Jeux VIE (VIE Water Care) - niveaux, Points Bouclier,
+      vies, catégories thématiques - adaptée à la fraude mobile money, avec Lieutenant Cyber (l'IA propre à
+      Kimatey FinNet Guard, une création originale) comme guide. Les Points Bouclier n'ont aucune valeur
+      monétaire ni conversion en argent réel : un indicateur de progression et de vigilance, point.
+      Contrairement à l'application Streamlit de l'Espace Organisation, votre progression ici est mémorisée
+      dans votre navigateur (pas de compte requis) et survit à une fermeture de la page.
+    </p>
+    <div id="game-header-container"></div>
+    <div id="category-tabs-container"></div>
+    <div id="mascot-container"></div>
+    <div id="quiz-container"></div>
+    <div id="badges-container"></div>
+
+    <h3 style="margin-top:2rem">🤝 Racontez à Lieutenant Cyber ce qui vous est arrivé</h3>
+    <p class="hint">
+      Pas de formulaire à remplir : discutez-en comme vous le feriez avec un ami. Aucune information
+      personnelle n'est demandée - seule la technique utilisée par l'escroc nous intéresse.
+    </p>
+    <div id="report-container"></div>
+  </div>
+</div>
+
+<div class="balloons" id="balloons"></div>
+
+<script>
+// ==========================================================================
+// Etat global
+// ==========================================================================
+const chatMessages = [];
+
+let reportSteps = [];
+let reportStep = 0;
+let reportAnswers = {};
+let reportDone = false;
+let contributionsCount = 0;
+
+// ==========================================================================
+// Navigation par onglets
+// ==========================================================================
+document.querySelectorAll(".tab-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+  });
+});
+
+// ==========================================================================
+// Assistant conversationnel
+// ==========================================================================
+function renderChat() {
+  const box = document.getElementById("chat-box");
+  box.innerHTML = "";
+  if (chatMessages.length === 0) {
+    box.innerHTML = '<div class="bubble assistant">👋 Bonjour ! Posez-moi une question sur une alerte ou un message suspect que vous avez reçu.</div>';
+  }
+  chatMessages.forEach((m) => {
+    const div = document.createElement("div");
+    div.className = "bubble " + m.role;
+    div.textContent = m.content;
+    box.appendChild(div);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+function speak(text) {
+  try {
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "fr-FR";
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utter);
+  } catch (e) {
+    console.warn("Synthese vocale indisponible :", e);
+  }
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById("chat-input");
+  const message = input.value.trim();
+  if (!message) return;
+  input.value = "";
+  chatMessages.push({ role: "user", content: message });
+  renderChat();
+
+  try {
+    const r = await fetch(API_BASE_URL + "/assistant/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+    });
+    if (!r.ok) {
+      const body = await r.json().catch(() => ({}));
+      chatMessages.push({
+        role: "error",
+        content: body.detail || "L'assistant n'est pas disponible pour le moment.",
+      });
+    } else {
+      const body = await r.json();
+      chatMessages.push({ role: "assistant", content: body.reply });
+      speak(body.reply);
+    }
+  } catch (e) {
+    chatMessages.push({
+      role: "error",
+      content: "Impossible de contacter le serveur. Vérifiez que l'API est bien lancée (" + API_BASE_URL + ").",
+    });
+  }
+  renderChat();
+}
+
+document.getElementById("chat-send").addEventListener("click", sendChatMessage);
+document.getElementById("chat-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendChatMessage();
+});
+renderChat();
+
+// ==========================================================================
+// Jeu de vigilance gamifie (fusion avec le modele de l'Espace Jeux VIE / VIE Water Care) :
+// categories thematiques + mascottes, niveau/Points Bouclier, vies, badges.
+// Etat persiste dans localStorage (propre a ce navigateur) : contrairement a l'application
+// Streamlit (session-only), ici la progression survit a une fermeture de la page, sans compte.
+// ==========================================================================
+const GAME_STORAGE_KEY = "kimatey_game_state_v1";
+let gameCategories = [];
+let gameMeta = null;
+let gameState = loadGameState();
+
+function loadGameState() {
+  try {
+    const raw = localStorage.getItem(GAME_STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) { /* localStorage indisponible (navigation privee, etc.) : on repart a zero */ }
+  return { xp: 0, hearts: 3, category: null, quizIndex: {}, badgesSeen: [], quizSelected: null, quizAnswered: false };
+}
+
+function saveGameState() {
+  try { localStorage.setItem(GAME_STORAGE_KEY, JSON.stringify(gameState)); } catch (e) { /* ignore */ }
+}
+
+function computeLevel(xp, levels) {
+  let current = levels[0];
+  let next = null;
+  for (let i = 0; i < levels.length; i++) {
+    if (xp >= levels[i].xp_threshold) {
+      current = levels[i];
+      next = i + 1 < levels.length ? levels[i + 1] : null;
+    } else {
+      break;
+    }
+  }
+  const ratio = next ? Math.min(1, (xp - current.xp_threshold) / (next.xp_threshold - current.xp_threshold)) : 1;
+  return { title: current.title, nextThreshold: next ? next.xp_threshold : null, ratio };
+}
+
+function unlockedBadges(xp, badges) {
+  return badges.filter((b) => xp >= b.xp_required);
+}
+
+function renderGameHeader() {
+  const el = document.getElementById("game-header-container");
+  if (!gameMeta) { el.innerHTML = ""; return; }
+  const level = computeLevel(gameState.xp, gameMeta.levels);
+  const unlocked = unlockedBadges(gameState.xp, gameMeta.badges);
+  const heartsStr = "❤️ ".repeat(gameState.hearts) + "🖤 ".repeat(gameMeta.max_hearts - gameState.hearts);
+  const nextTxt = level.nextThreshold ? " (prochain niveau à " + level.nextThreshold + " 🛡️)" : " - niveau maximal !";
+  el.innerHTML =
+    '<div class="game-cards">' +
+      '<div class="game-card"><div class="g-label">Niveau</div><div class="g-value">' + level.title + '</div>' +
+        '<div class="g-sub">' + gameState.xp + ' Points Bouclier' + nextTxt + '</div></div>' +
+      '<div class="game-card"><div class="g-label">Vies</div><div class="g-value">' + heartsStr.trim() + '</div></div>' +
+      '<div class="game-card"><div class="g-label">Badges</div><div class="g-value">' + unlocked.length + ' / ' + gameMeta.badges.length + '</div></div>' +
+    '</div>' +
+    '<div class="progress-bar"><div class="progress-fill" style="width:' + Math.round(level.ratio * 100) + '%"></div></div>';
+}
+
+function renderCategoryTabs() {
+  const el = document.getElementById("category-tabs-container");
+  el.innerHTML = '<div class="category-tabs">' +
+    gameCategories.map((c) =>
+      '<button class="category-tab' + (c.key === gameState.category ? ' active' : '') + '" data-cat="' + c.key + '">' +
+        c.emoji + ' ' + c.label + '</button>'
+    ).join("") +
+    '</div>' +
+    '<div class="age-select"><label>Votre tranche d\'âge (adapte simplement le ton de la mascotte) : ' +
+    '<select id="age-band-select"><option value="ado">🧒 Ado (13-17 ans)</option>' +
+    '<option value="adulte" selected>🧑 Adulte (18 ans et plus)</option></select></label></div>';
+
+  el.querySelectorAll(".category-tab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      gameState.category = btn.dataset.cat;
+      gameState.quizSelected = null;
+      gameState.quizAnswered = false;
+      saveGameState();
+      renderAll();
+    });
+  });
+}
+
+function currentCategory() {
+  return gameCategories.find((c) => c.key === gameState.category) || gameCategories[0];
+}
+
+function renderMascot() {
+  const el = document.getElementById("mascot-container");
+  const cat = currentCategory();
+  if (!cat) { el.innerHTML = ""; return; }
+  const ageBand = document.getElementById("age-band-select") ? document.getElementById("age-band-select").value : "adulte";
+  let html = '<div class="bubble assistant"><b>' + cat.mascot_name + '</b> : ' + cat.mascot_intro + '</div>';
+  if (ageBand === "ado") {
+    html += '<p class="hint">Astuce pour les ados : si un adulte vous pousse à agir vite ou à garder un secret ' +
+      'pour de l\'argent, parlez-en toujours à un parent ou une personne de confiance avant.</p>';
+  }
+  el.innerHTML = html;
+}
+
+function renderQuiz() {
+  const el = document.getElementById("quiz-container");
+  const cat = currentCategory();
+  if (!cat || !cat.scenarios.length) {
+    el.innerHTML = '<p class="hint">Chargement du jeu de vigilance...</p>';
+    return;
+  }
+  const idx = (gameState.quizIndex[cat.key] || 0) % cat.scenarios.length;
+  const s = cat.scenarios[idx];
+
+  if (gameState.hearts <= 0) {
+    el.innerHTML = '<p class="hint">🛡️ Plus de vies pour l\'instant sur cette session.</p>' +
+      '<button class="btn" id="recharge-hearts">🔁 Recharger mes vies</button>';
+    document.getElementById("recharge-hearts").addEventListener("click", () => {
+      gameState.hearts = gameMeta.max_hearts;
+      saveGameState();
+      renderAll();
+    });
+    return;
+  }
+
+  let html = '<div class="scenario-box">' + s.situation + "</div>";
+  html += '<div class="choice-row">';
+  s.choices.forEach((choice, i) => {
+    html += '<label class="choice-label"><input type="radio" name="quiz-choice" value="' + i + '"' +
+      (gameState.quizSelected === i ? " checked" : "") + "> " + choice + "</label>";
+  });
+  html += "</div>";
+  html += '<button class="btn" id="quiz-validate"' + (gameState.quizSelected === null || gameState.quizAnswered ? " disabled" : "") + '>Valider ma réponse</button> ';
+  html += '<button class="btn secondary" id="quiz-next">Scénario suivant ➡️</button>';
+  if (gameState.quizAnswered) {
+    const correct = gameState.quizSelected === s.correct;
+    html += '<div class="feedback ' + (correct ? "good" : "bad") + '">' +
+      (correct ? "✅ Bien joué ! +" + gameMeta.xp_per_correct + " 🛡️ Points Bouclier. "
+                : "⚠️ Pas tout à fait (-1 ❤️, +" + gameMeta.xp_per_incorrect + " 🛡️ quand même, pour avoir essayé). ") +
+      s.explanation + "</div>";
+    if (s.tip) html += '<div class="tip-box">💡 ' + s.tip + '</div>';
+  }
+  el.innerHTML = html;
+
+  el.querySelectorAll('input[name="quiz-choice"]').forEach((input) => {
+    input.addEventListener("change", (e) => {
+      gameState.quizSelected = parseInt(e.target.value, 10);
+      saveGameState();
+      renderQuiz();
+    });
+  });
+  const validateBtn = document.getElementById("quiz-validate");
+  if (validateBtn) {
+    validateBtn.addEventListener("click", () => {
+      if (gameState.quizSelected === null || gameState.quizAnswered) return;
+      gameState.quizAnswered = true;
+      if (gameState.quizSelected === s.correct) {
+        gameState.xp += gameMeta.xp_per_correct;
+      } else {
+        gameState.hearts = Math.max(0, gameState.hearts - 1);
+        gameState.xp += gameMeta.xp_per_incorrect;
+      }
+      saveGameState();
+      renderAll();
+    });
+  }
+  document.getElementById("quiz-next").addEventListener("click", () => {
+    gameState.quizIndex[cat.key] = idx + 1;
+    gameState.quizSelected = null;
+    gameState.quizAnswered = false;
+    saveGameState();
+    renderAll();
+  });
+}
+
+function renderBadges() {
+  const el = document.getElementById("badges-container");
+  if (!gameMeta) { el.innerHTML = ""; return; }
+  const unlockedKeys = new Set(unlockedBadges(gameState.xp, gameMeta.badges).map((b) => b.key));
+  let html = '<h4 style="margin-top:1.2rem">🏅 Mes badges (' + unlockedKeys.size + '/' + gameMeta.badges.length + ')</h4>';
+  html += '<div class="badge-list">';
+  gameMeta.badges.forEach((b) => {
+    const unlocked = unlockedKeys.has(b.key);
+    html += '<div class="badge-item' + (unlocked ? "" : " locked") + '">' +
+      (unlocked ? "✅ " : "🔒 ") + b.emoji + ' <b>' + b.label + '</b>' +
+      (unlocked ? "" : ' <span class="hint">(à ' + b.xp_required + ' Points Bouclier)</span>') +
+      ' - ' + b.desc + '</div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function renderAll() {
+  renderGameHeader();
+  renderCategoryTabs();
+  renderMascot();
+  renderQuiz();
+  renderBadges();
+  // renderCategoryTabs() recree le <select> d'age : reattacher son ecouteur pour renderMascot().
+  const ageSelect = document.getElementById("age-band-select");
+  if (ageSelect) ageSelect.addEventListener("change", renderMascot);
+}
+
+async function loadGame() {
+  try {
+    const [rCat, rMeta] = await Promise.all([
+      fetch(API_BASE_URL + "/game/categories"),
+      fetch(API_BASE_URL + "/game/meta"),
+    ]);
+    gameCategories = await rCat.json();
+    gameMeta = await rMeta.json();
+  } catch (e) {
+    document.getElementById("quiz-container").innerHTML =
+      '<p class="hint">Jeu de vigilance indisponible : impossible de contacter le serveur (' + API_BASE_URL + ").</p>";
+    return;
+  }
+  if (!gameState.category || !gameCategories.find((c) => c.key === gameState.category)) {
+    gameState.category = gameCategories[0].key;
+  }
+  saveGameState();
+  renderAll();
+}
+
+// ==========================================================================
+// Collecte participative (echange guide façon chat)
+// ==========================================================================
+function launchBalloons() {
+  const container = document.getElementById("balloons");
+  const emojis = ["🎈", "🎉", "✨", "🎊"];
+  for (let i = 0; i < 18; i++) {
+    const span = document.createElement("span");
+    span.className = "balloon";
+    span.textContent = emojis[i % emojis.length];
+    span.style.left = Math.random() * 100 + "vw";
+    span.style.animationDelay = Math.random() * 0.6 + "s";
+    span.style.fontSize = 1.4 + Math.random() * 1.4 + "rem";
+    container.appendChild(span);
+  }
+  setTimeout(() => { container.innerHTML = ""; }, 4000);
+}
+
+async function submitTemoignage(detail) {
+  const payload = {
+    canal: reportAnswers.canal || "non précisé",
+    demande: reportAnswers.demande || "non précisé",
+    reaction: reportAnswers.reaction || "non précisé",
+  };
+  if (detail && detail.trim()) payload.detail = detail.trim();
+  try {
+    const r = await fetch(API_BASE_URL + "/temoignage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const body = await r.json();
+    contributionsCount = body.total_contributions || contributionsCount + 1;
+  } catch (e) {
+    contributionsCount += 1; // repli local : on ne bloque pas le remerciement si le serveur est injoignable
+  }
+  reportDone = true;
+  renderReport();
+  launchBalloons();
+}
+
+function renderReport() {
+  const el = document.getElementById("report-container");
+  let html = '<div class="chat-box" style="min-height:auto">';
+  html += '<div class="bubble assistant">👋 Racontez-moi ce qui s\'est passé, comme si vous en parliez à un ami - je ne vous demanderai jamais votre nom, votre numéro ou un montant précis.</div>';
+
+  for (let i = 0; i < Math.min(reportStep, reportSteps.length); i++) {
+    const step = reportSteps[i];
+    html += '<div class="bubble assistant">' + step.question + "</div>";
+    html += '<div class="bubble user">' + (reportAnswers[step.key] || "") + "</div>";
+  }
+
+  if (reportDone) {
+    html += '<div class="bubble assistant">🎉 Merci beaucoup ! Vous êtes la ' + contributionsCount +
+      "e personne à nous aider aujourd'hui à mieux repérer ce genre de piège.</div>";
+  } else if (reportStep < reportSteps.length) {
+    const current = reportSteps[reportStep];
+    html += '<div class="bubble assistant">' + current.question + "</div>";
+  } else {
+    html += '<div class="bubble assistant">Merci ! Un dernier détail à ajouter, à l\'écrit ? C\'est facultatif - et toujours sans nom, numéro ni montant.</div>';
+  }
+  html += "</div>";
+
+  if (reportDone) {
+    html += '<button class="btn secondary" id="report-restart">Partager une autre expérience</button>';
+  } else if (reportStep < reportSteps.length) {
+    const current = reportSteps[reportStep];
+    html += '<div class="report-options">';
+    current.options.forEach((opt) => {
+      html += '<button class="btn secondary report-opt" data-key="' + current.key + '" data-value="' +
+        opt.replace(/"/g, "&quot;") + '">' + opt + "</button>";
+    });
+    html += "</div>";
+  } else {
+    html += '<textarea class="detail-input" id="report-detail" placeholder="Écrivez ici si vous voulez ajouter un détail..."></textarea>';
+    html += '<button class="btn" id="report-send">Envoyer ma contribution 🎉</button> ';
+    html += '<button class="btn secondary" id="report-skip">Terminer sans détail</button>';
+  }
+
+  el.innerHTML = html;
+
+  el.querySelectorAll(".report-opt").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      reportAnswers[btn.dataset.key] = btn.dataset.value;
+      reportStep += 1;
+      renderReport();
+    });
+  });
+  const restartBtn = document.getElementById("report-restart");
+  if (restartBtn) {
+    restartBtn.addEventListener("click", () => {
+      reportStep = 0;
+      reportAnswers = {};
+      reportDone = false;
+      renderReport();
+    });
+  }
+  const sendBtn = document.getElementById("report-send");
+  if (sendBtn) {
+    sendBtn.addEventListener("click", () => {
+      const detail = document.getElementById("report-detail").value;
+      submitTemoignage(detail);
+    });
+  }
+  const skipBtn = document.getElementById("report-skip");
+  if (skipBtn) {
+    skipBtn.addEventListener("click", () => submitTemoignage(""));
+  }
+}
+
+async function loadReportSteps() {
+  try {
+    const r = await fetch(API_BASE_URL + "/report_steps");
+    reportSteps = await r.json();
+  } catch (e) {
+    document.getElementById("report-container").innerHTML =
+      '<p class="hint">Échange indisponible : impossible de contacter le serveur (' + API_BASE_URL + ").</p>";
+    return;
+  }
+  renderReport();
+}
+
+loadGame();
+loadReportSteps();
+</script>
+</body>
+</html>

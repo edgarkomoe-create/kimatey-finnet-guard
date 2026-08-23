@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kimatey FinNet Guard - Accueil</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<script src="config.js"></script>
+<div class="page">
+  <div class="header">
+    <div class="header-top">
+      <div class="header-title">
+        <span class="shield">🛡️</span>
+        <div>
+          <h1>Kimatey FinNet Guard</h1>
+          <p>Securise l'infrastructure reseau des fintechs, agregateurs mobile money, institutions de
+             microfinance et administrations publiques - et sensibilise directement les citoyens contre
+             les arnaques mobile money.</p>
+        </div>
+      </div>
+      <div class="live-pill"><span class="live-dot"></span>Surveillance active</div>
+    </div>
+  </div>
+
+  <p class="landing-title">Bienvenue - choisissez votre espace</p>
+
+  <div class="cards">
+    <div class="card">
+      <h3>🏢 Espace Organisation</h3>
+      <p>Tableau de bord technique : detection en temps reel, analyse de logs, surveillance en direct,
+         journal d'alertes. Pour les equipes IT/securite des fintechs, operateurs mobile money,
+         institutions financieres et administrations.</p>
+      <a class="btn" id="link-organisation" href="#">Entrer dans l'Espace Organisation →</a>
+    </div>
+    <div class="card">
+      <h3>👥 Espace Grand Public</h3>
+      <p>Discutez avec Lieutenant Cyber, testez vos reflexes face aux arnaques mobile money, et aidez
+         a en reperer de nouvelles - sans jamais partager d'information personnelle.</p>
+      <a class="btn" href="public.html">Entrer dans l'Espace Grand Public →</a>
+    </div>
+  </div>
+
+  <p class="footer-note">
+    Interface web - Kimatey FinNet Guard - Projet ML Master 1 UFRMI. L'Espace Organisation reste servi par
+    l'application Streamlit existante (deep-link direct, sans double clic) ; l'Espace Grand Public ci-contre
+    est une page web independante consommant directement l'API (voir config.js pour l'adresse de l'API et
+    de l'application Streamlit).
+  </p>
+</div>
+<script>
+  document.getElementById("link-organisation").href = ORG_APP_URL + "/?view=organisation";
+</script>
+</body>
+</html>

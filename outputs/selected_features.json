@@ -1,0 +1,10 @@
+{
+  "selected_features": [
+    "Octets_Source_Vers_Dest",
+    "Taux_Paquets_Secondes",
+    "Ports_Dest_Distincts",
+    "Taux_Erreur_CheckSum",
+    "Frequence_SYN_Flags"
+  ],
+  "n_selected": 5
+}
