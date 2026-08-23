@@ -15,48 +15,51 @@
         <span class="shield">🛡️</span>
         <div>
           <h1>Kimatey FinNet Guard</h1>
-          <p>Securise l'infrastructure reseau des fintechs, agregateurs mobile money, institutions de
+          <p data-i18n="header_desc">Securise l'infrastructure reseau des fintechs, agregateurs mobile money, institutions de
              microfinance et administrations publiques - et sensibilise directement les citoyens contre
              les arnaques mobile money.</p>
         </div>
       </div>
-      <div class="live-pill"><span class="live-dot"></span>Surveillance active</div>
+      <div style="display:flex; align-items:center; gap:.6rem;">
+        <button class="btn secondary lang-toggle-btn" onclick="setLang(getLang()==='fr'?'en':'fr')">🌍 EN</button>
+        <div class="live-pill"><span class="live-dot"></span><span data-i18n="live_pill">Surveillance active</span></div>
+      </div>
     </div>
   </div>
 
-  <a class="back-link" href="index.html">← Retour à l'accueil</a>
+  <a class="back-link" href="index.html" data-i18n="back_link">← Retour à l'accueil</a>
 
   <div class="tabs">
-    <button class="tab-btn active" data-tab="assistant">🎖️ Lieutenant Cyber</button>
-    <button class="tab-btn" data-tab="sensibilisation">🎮 Sensibilisation</button>
+    <button class="tab-btn active" data-tab="assistant" data-i18n="tab_assistant">🎖️ Lieutenant Cyber</button>
+    <button class="tab-btn" data-tab="sensibilisation" data-i18n="tab_sensibilisation">🎮 Sensibilisation</button>
   </div>
 
   <!-- ============================== Onglet Assistant ============================== -->
   <div class="tab-panel active" id="panel-assistant">
-    <h2>🎖️ Lieutenant Cyber - l'IA de Kimatey FinNet Guard</h2>
-    <p class="hint">
+    <h2 data-i18n="assistant_h2">🎖️ Lieutenant Cyber - l'IA de Kimatey FinNet Guard</h2>
+    <p class="hint" data-i18n="assistant_hint">
       Posez une question en langage courant sur une alerte, une menace, ou un message suspect reçu par
       mobile money. Cet assistant explique et sensibilise ; il ne remplace pas la détection automatique
       du tableau de bord de l'Espace Organisation.
     </p>
     <div class="chat-box" id="chat-box"></div>
     <div class="chat-input-row">
-      <input type="text" id="chat-input" placeholder="Écrivez votre question ici..." />
-      <button class="btn" id="chat-send">Envoyer</button>
+      <input type="text" id="chat-input" data-i18n-placeholder="chat_placeholder" placeholder="Écrivez votre question ici..." />
+      <button class="btn" id="chat-send" data-i18n="chat_send">Envoyer</button>
     </div>
-    <p class="hint">🔊 Les réponses de l'assistant sont lues à voix haute automatiquement (synthèse vocale du navigateur).</p>
+    <p class="hint" data-i18n="chat_voice_hint">🔊 Les réponses de l'assistant sont lues à voix haute automatiquement (synthèse vocale du navigateur).</p>
   </div>
 
   <!-- ============================== Onglet Sensibilisation ============================== -->
   <div class="tab-panel" id="panel-sensibilisation">
-    <h2>🎮 Sensibilisation ludique &amp; vigilance collective</h2>
-    <p class="hint">
+    <h2 data-i18n="sensib_h2">🎮 Sensibilisation ludique &amp; vigilance collective</h2>
+    <p class="hint" data-i18n="sensib_hint">
       Deux façons de participer : tester vos réflexes face à des situations réelles, et aider à repérer de
       nouvelles techniques d'arnaque - sans jamais partager d'information personnelle.
     </p>
 
-    <h3>🧠 Jeu de vigilance : sauriez-vous repérer le piège ?</h3>
-    <p class="no-value-note">
+    <h3 data-i18n="game_h3">🧠 Jeu de vigilance : sauriez-vous repérer le piège ?</h3>
+    <p class="no-value-note" data-i18n="game_note">
       Mécanique de gamification inspirée de l'Espace Jeux VIE (VIE Water Care) - niveaux, Points Bouclier,
       vies, catégories thématiques - adaptée à la fraude mobile money, avec Lieutenant Cyber (l'IA propre à
       Kimatey FinNet Guard, une création originale) comme guide. Les Points Bouclier n'ont aucune valeur
@@ -64,14 +67,15 @@
       Contrairement à l'application Streamlit de l'Espace Organisation, votre progression ici est mémorisée
       dans votre navigateur (pas de compte requis) et survit à une fermeture de la page.
     </p>
+    <p class="hint" style="font-style:italic" data-i18n="game_lang_note">🌍 Les scénarios du quiz et les échanges avec Lieutenant Cyber restent en français pour le moment, quelle que soit la langue choisie ici.</p>
     <div id="game-header-container"></div>
     <div id="category-tabs-container"></div>
     <div id="mascot-container"></div>
     <div id="quiz-container"></div>
     <div id="badges-container"></div>
 
-    <h3 style="margin-top:2rem">🤝 Racontez à Lieutenant Cyber ce qui vous est arrivé</h3>
-    <p class="hint">
+    <h3 style="margin-top:2rem" data-i18n="report_h3">🤝 Racontez à Lieutenant Cyber ce qui vous est arrivé</h3>
+    <p class="hint" data-i18n="report_hint">
       Pas de formulaire à remplir : discutez-en comme vous le feriez avec un ami. Aucune information
       personnelle n'est demandée - seule la technique utilisée par l'escroc nous intéresse.
     </p>
@@ -81,6 +85,7 @@
 
 <div class="balloons" id="balloons"></div>
 
+<script src="i18n.js"></script>
 <script>
 // ==========================================================================
 // Etat global
@@ -106,13 +111,22 @@ document.querySelectorAll(".tab-btn").forEach((btn) => {
 });
 
 // ==========================================================================
+// Rappel apres changement de langue (i18n.js appelle onLangChange s'il existe)
+// ==========================================================================
+function onLangChange() {
+  renderChat();
+  renderAll();
+  renderReport();
+}
+
+// ==========================================================================
 // Assistant conversationnel
 // ==========================================================================
 function renderChat() {
   const box = document.getElementById("chat-box");
   box.innerHTML = "";
   if (chatMessages.length === 0) {
-    box.innerHTML = '<div class="bubble assistant">👋 Bonjour ! Posez-moi une question sur une alerte ou un message suspect que vous avez reçu.</div>';
+    box.innerHTML = '<div class="bubble assistant">' + t("chat_welcome") + '</div>';
   }
   chatMessages.forEach((m) => {
     const div = document.createElement("div");
@@ -152,7 +166,7 @@ async function sendChatMessage() {
       const body = await r.json().catch(() => ({}));
       chatMessages.push({
         role: "error",
-        content: body.detail || "L'assistant n'est pas disponible pour le moment.",
+        content: body.detail || t("chat_unavailable"),
       });
     } else {
       const body = await r.json();
@@ -162,7 +176,7 @@ async function sendChatMessage() {
   } catch (e) {
     chatMessages.push({
       role: "error",
-      content: "Impossible de contacter le serveur. Vérifiez que l'API est bien lancée (" + API_BASE_URL + ").",
+      content: t("chat_server_error") + API_BASE_URL + ").",
     });
   }
   renderChat();
@@ -179,6 +193,8 @@ renderChat();
 // categories thematiques + mascottes, niveau/Points Bouclier, vies, badges.
 // Etat persiste dans localStorage (propre a ce navigateur) : contrairement a l'application
 // Streamlit (session-only), ici la progression survit a une fermeture de la page, sans compte.
+// NOTE i18n : le contenu du jeu (scenarios, mascottes, badges) vient de l'API et reste en
+// francais ; seul le "chrome" (libelles fixes de l'interface) est traduit.
 // ==========================================================================
 const GAME_STORAGE_KEY = "kimatey_game_state_v1";
 let gameCategories = [];
@@ -222,13 +238,13 @@ function renderGameHeader() {
   const level = computeLevel(gameState.xp, gameMeta.levels);
   const unlocked = unlockedBadges(gameState.xp, gameMeta.badges);
   const heartsStr = "❤️ ".repeat(gameState.hearts) + "🖤 ".repeat(gameMeta.max_hearts - gameState.hearts);
-  const nextTxt = level.nextThreshold ? " (prochain niveau à " + level.nextThreshold + " 🛡️)" : " - niveau maximal !";
+  const nextTxt = level.nextThreshold ? (t("g_next_level") + level.nextThreshold + t("g_shield_suffix")) : t("g_max_level");
   el.innerHTML =
     '<div class="game-cards">' +
-      '<div class="game-card"><div class="g-label">Niveau</div><div class="g-value">' + level.title + '</div>' +
-        '<div class="g-sub">' + gameState.xp + ' Points Bouclier' + nextTxt + '</div></div>' +
-      '<div class="game-card"><div class="g-label">Vies</div><div class="g-value">' + heartsStr.trim() + '</div></div>' +
-      '<div class="game-card"><div class="g-label">Badges</div><div class="g-value">' + unlocked.length + ' / ' + gameMeta.badges.length + '</div></div>' +
+      '<div class="game-card"><div class="g-label">' + t("g_level") + '</div><div class="g-value">' + level.title + '</div>' +
+        '<div class="g-sub">' + gameState.xp + t("g_shield_points") + nextTxt + '</div></div>' +
+      '<div class="game-card"><div class="g-label">' + t("g_hearts") + '</div><div class="g-value">' + heartsStr.trim() + '</div></div>' +
+      '<div class="game-card"><div class="g-label">' + t("g_badges") + '</div><div class="g-value">' + unlocked.length + ' / ' + gameMeta.badges.length + '</div></div>' +
     '</div>' +
     '<div class="progress-bar"><div class="progress-fill" style="width:' + Math.round(level.ratio * 100) + '%"></div></div>';
 }
@@ -241,9 +257,9 @@ function renderCategoryTabs() {
         c.emoji + ' ' + c.label + '</button>'
     ).join("") +
     '</div>' +
-    '<div class="age-select"><label>Votre tranche d\'âge (adapte simplement le ton de la mascotte) : ' +
-    '<select id="age-band-select"><option value="ado">🧒 Ado (13-17 ans)</option>' +
-    '<option value="adulte" selected>🧑 Adulte (18 ans et plus)</option></select></label></div>';
+    '<div class="age-select"><label>' + t("age_label") +
+    '<select id="age-band-select"><option value="ado">' + t("age_teen") + '</option>' +
+    '<option value="adulte" selected>' + t("age_adult") + '</option></select></label></div>';
 
   el.querySelectorAll(".category-tab").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -267,8 +283,7 @@ function renderMascot() {
   const ageBand = document.getElementById("age-band-select") ? document.getElementById("age-band-select").value : "adulte";
   let html = '<div class="bubble assistant"><b>' + cat.mascot_name + '</b> : ' + cat.mascot_intro + '</div>';
   if (ageBand === "ado") {
-    html += '<p class="hint">Astuce pour les ados : si un adulte vous pousse à agir vite ou à garder un secret ' +
-      'pour de l\'argent, parlez-en toujours à un parent ou une personne de confiance avant.</p>';
+    html += '<p class="hint">' + t("teen_tip") + '</p>';
   }
   el.innerHTML = html;
 }
@@ -277,15 +292,15 @@ function renderQuiz() {
   const el = document.getElementById("quiz-container");
   const cat = currentCategory();
   if (!cat || !cat.scenarios.length) {
-    el.innerHTML = '<p class="hint">Chargement du jeu de vigilance...</p>';
+    el.innerHTML = '<p class="hint">' + t("quiz_loading") + '</p>';
     return;
   }
   const idx = (gameState.quizIndex[cat.key] || 0) % cat.scenarios.length;
   const s = cat.scenarios[idx];
 
   if (gameState.hearts <= 0) {
-    el.innerHTML = '<p class="hint">🛡️ Plus de vies pour l\'instant sur cette session.</p>' +
-      '<button class="btn" id="recharge-hearts">🔁 Recharger mes vies</button>';
+    el.innerHTML = '<p class="hint">' + t("no_lives") + '</p>' +
+      '<button class="btn" id="recharge-hearts">' + t("recharge") + '</button>';
     document.getElementById("recharge-hearts").addEventListener("click", () => {
       gameState.hearts = gameMeta.max_hearts;
       saveGameState();
@@ -301,13 +316,13 @@ function renderQuiz() {
       (gameState.quizSelected === i ? " checked" : "") + "> " + choice + "</label>";
   });
   html += "</div>";
-  html += '<button class="btn" id="quiz-validate"' + (gameState.quizSelected === null || gameState.quizAnswered ? " disabled" : "") + '>Valider ma réponse</button> ';
-  html += '<button class="btn secondary" id="quiz-next">Scénario suivant ➡️</button>';
+  html += '<button class="btn" id="quiz-validate"' + (gameState.quizSelected === null || gameState.quizAnswered ? " disabled" : "") + '>' + t("validate") + '</button> ';
+  html += '<button class="btn secondary" id="quiz-next">' + t("next_scenario") + '</button>';
   if (gameState.quizAnswered) {
     const correct = gameState.quizSelected === s.correct;
     html += '<div class="feedback ' + (correct ? "good" : "bad") + '">' +
-      (correct ? "✅ Bien joué ! +" + gameMeta.xp_per_correct + " 🛡️ Points Bouclier. "
-                : "⚠️ Pas tout à fait (-1 ❤️, +" + gameMeta.xp_per_incorrect + " 🛡️ quand même, pour avoir essayé). ") +
+      (correct ? t("feedback_good") + gameMeta.xp_per_correct + " 🛡️ Points Bouclier. "
+                : t("feedback_bad_1") + gameMeta.xp_per_incorrect + t("feedback_bad_2")) +
       s.explanation + "</div>";
     if (s.tip) html += '<div class="tip-box">💡 ' + s.tip + '</div>';
   }
@@ -348,13 +363,13 @@ function renderBadges() {
   const el = document.getElementById("badges-container");
   if (!gameMeta) { el.innerHTML = ""; return; }
   const unlockedKeys = new Set(unlockedBadges(gameState.xp, gameMeta.badges).map((b) => b.key));
-  let html = '<h4 style="margin-top:1.2rem">🏅 Mes badges (' + unlockedKeys.size + '/' + gameMeta.badges.length + ')</h4>';
+  let html = '<h4 style="margin-top:1.2rem">' + t("my_badges") + unlockedKeys.size + '/' + gameMeta.badges.length + ')</h4>';
   html += '<div class="badge-list">';
   gameMeta.badges.forEach((b) => {
     const unlocked = unlockedKeys.has(b.key);
     html += '<div class="badge-item' + (unlocked ? "" : " locked") + '">' +
       (unlocked ? "✅ " : "🔒 ") + b.emoji + ' <b>' + b.label + '</b>' +
-      (unlocked ? "" : ' <span class="hint">(à ' + b.xp_required + ' Points Bouclier)</span>') +
+      (unlocked ? "" : ' <span class="hint">' + t("badge_locked_req") + b.xp_required + t("badge_locked_req_suffix") + '</span>') +
       ' - ' + b.desc + '</div>';
   });
   html += '</div>';
@@ -382,7 +397,7 @@ async function loadGame() {
     gameMeta = await rMeta.json();
   } catch (e) {
     document.getElementById("quiz-container").innerHTML =
-      '<p class="hint">Jeu de vigilance indisponible : impossible de contacter le serveur (' + API_BASE_URL + ").</p>";
+      '<p class="hint">' + t("game_unavailable") + API_BASE_URL + ").</p>";
     return;
   }
   if (!gameState.category || !gameCategories.find((c) => c.key === gameState.category)) {
@@ -435,8 +450,9 @@ async function submitTemoignage(detail) {
 
 function renderReport() {
   const el = document.getElementById("report-container");
+  if (!el) return;
   let html = '<div class="chat-box" style="min-height:auto">';
-  html += '<div class="bubble assistant">👋 Racontez-moi ce qui s\'est passé, comme si vous en parliez à un ami - je ne vous demanderai jamais votre nom, votre numéro ou un montant précis.</div>';
+  html += '<div class="bubble assistant">' + t("report_welcome") + '</div>';
 
   for (let i = 0; i < Math.min(reportStep, reportSteps.length); i++) {
     const step = reportSteps[i];
@@ -445,18 +461,17 @@ function renderReport() {
   }
 
   if (reportDone) {
-    html += '<div class="bubble assistant">🎉 Merci beaucoup ! Vous êtes la ' + contributionsCount +
-      "e personne à nous aider aujourd'hui à mieux repérer ce genre de piège.</div>";
+    html += '<div class="bubble assistant">' + t("report_thanks_1") + contributionsCount + t("report_thanks_2") + '</div>';
   } else if (reportStep < reportSteps.length) {
     const current = reportSteps[reportStep];
     html += '<div class="bubble assistant">' + current.question + "</div>";
   } else {
-    html += '<div class="bubble assistant">Merci ! Un dernier détail à ajouter, à l\'écrit ? C\'est facultatif - et toujours sans nom, numéro ni montant.</div>';
+    html += '<div class="bubble assistant">' + t("report_last_detail") + '</div>';
   }
   html += "</div>";
 
   if (reportDone) {
-    html += '<button class="btn secondary" id="report-restart">Partager une autre expérience</button>';
+    html += '<button class="btn secondary" id="report-restart">' + t("report_restart") + '</button>';
   } else if (reportStep < reportSteps.length) {
     const current = reportSteps[reportStep];
     html += '<div class="report-options">';
@@ -466,9 +481,9 @@ function renderReport() {
     });
     html += "</div>";
   } else {
-    html += '<textarea class="detail-input" id="report-detail" placeholder="Écrivez ici si vous voulez ajouter un détail..."></textarea>';
-    html += '<button class="btn" id="report-send">Envoyer ma contribution 🎉</button> ';
-    html += '<button class="btn secondary" id="report-skip">Terminer sans détail</button>';
+    html += '<textarea class="detail-input" id="report-detail" placeholder="' + t("report_detail_placeholder") + '"></textarea>';
+    html += '<button class="btn" id="report-send">' + t("report_send") + '</button> ';
+    html += '<button class="btn secondary" id="report-skip">' + t("report_skip") + '</button>';
   }
 
   el.innerHTML = html;
@@ -508,7 +523,7 @@ async function loadReportSteps() {
     reportSteps = await r.json();
   } catch (e) {
     document.getElementById("report-container").innerHTML =
-      '<p class="hint">Échange indisponible : impossible de contacter le serveur (' + API_BASE_URL + ").</p>";
+      '<p class="hint">' + t("report_unavailable") + API_BASE_URL + ").</p>";
     return;
   }
   renderReport();

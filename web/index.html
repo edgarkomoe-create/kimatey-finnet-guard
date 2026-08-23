@@ -18,22 +18,25 @@
   <!-- ===== NAV ===== -->
   <nav class="story-nav">
     <div class="story-nav-brand"><span class="shield">🛡️</span> Kimatey FinNet Guard</div>
-    <a href="#espaces" class="btn secondary story-nav-cta">Entrer dans la plateforme</a>
+    <div style="display:flex; gap:.6rem; align-items:center;">
+      <button class="btn secondary lang-toggle-btn" onclick="setLang(getLang()==='fr'?'en':'fr')">🌍 EN</button>
+      <a href="#espaces" class="btn secondary story-nav-cta" data-i18n="nav_cta">Entrer dans la plateforme</a>
+    </div>
   </nav>
 
   <!-- ===== HERO ===== -->
   <header class="hero">
     <div class="hero-copy">
-      <p class="eyebrow">Securite reseau &amp; protection citoyenne &middot; Afrique</p>
-      <h1>Une seule intelligence artificielle.<br><span class="accent">Deux lignes de defense.</span></h1>
-      <p class="hero-sub">
+      <p class="eyebrow" data-i18n="eyebrow">Securite reseau &amp; protection citoyenne · Afrique</p>
+      <h1><span data-i18n="hero_h1_1">Une seule intelligence artificielle.</span><br><span class="accent" data-i18n="hero_h1_2">Deux lignes de defense.</span></h1>
+      <p class="hero-sub" data-i18n="hero_sub">
         D'un cote, un moteur de machine learning qui detecte les attaques reseau visant les fintechs
         et les operateurs mobile money. De l'autre, un assistant conversationnel qui aide chaque citoyen
         a demasquer une arnaque avant d'y perdre son argent. Meme base technique, deux publics proteges.
       </p>
       <div class="hero-actions">
-        <a href="#espaces" class="btn">Decouvrir la plateforme →</a>
-        <a href="#comment" class="btn secondary">Comment ca marche</a>
+        <a href="#espaces" class="btn" data-i18n="hero_cta1">Decouvrir la plateforme →</a>
+        <a href="#comment" class="btn secondary" data-i18n="hero_cta2">Comment ca marche</a>
       </div>
     </div>
 
@@ -50,61 +53,61 @@
         <circle class="packet packet-b" r="5"/>
         <circle class="packet packet-c" r="5"/>
         <circle class="packet packet-d" r="4" />
-        <text x="400" y="76" text-anchor="end" class="lane-label">Organisation</text>
-        <text x="400" y="256" text-anchor="end" class="lane-label lane-label-public">Grand public</text>
+        <text x="400" y="76" text-anchor="end" class="lane-label" data-i18n="lane_org">Organisation</text>
+        <text x="400" y="256" text-anchor="end" class="lane-label lane-label-public" data-i18n="lane_public">Grand public</text>
       </svg>
     </div>
   </header>
 
   <!-- ===== PROBLEME ===== -->
   <section class="section problem">
-    <p class="section-eyebrow">Le probleme</p>
-    <h2>La finance mobile a change l'Afrique. La fraude a suivi la meme courbe.</h2>
+    <p class="section-eyebrow" data-i18n="problem_eyebrow">Le probleme</p>
+    <h2 data-i18n="problem_h2">La finance mobile a change l'Afrique. La fraude a suivi la meme courbe.</h2>
     <div class="problem-grid">
       <div class="problem-card">
-        <p class="problem-figure">75/25</p>
-        <p class="problem-text">Sur le trafic reseau analyse, un flux sur quatre porte deja une signature d'attaque potentielle contre l'infrastructure financiere.</p>
+        <p class="problem-figure" data-i18n="problem1_fig">75/25</p>
+        <p class="problem-text" data-i18n="problem1_txt">Sur le trafic reseau analyse, un flux sur quatre porte deja une signature d'attaque potentielle contre l'infrastructure financiere.</p>
       </div>
       <div class="problem-card">
-        <p class="problem-figure">SMS</p>
-        <p class="problem-text">Le canal le plus utilise pour arnaquer un utilisateur mobile money reste le message qui imite une banque ou un operateur.</p>
+        <p class="problem-figure" data-i18n="problem2_fig">SMS</p>
+        <p class="problem-text" data-i18n="problem2_txt">Le canal le plus utilise pour arnaquer un utilisateur mobile money reste le message qui imite une banque ou un operateur.</p>
       </div>
       <div class="problem-card">
-        <p class="problem-figure">2</p>
-        <p class="problem-text">cibles distinctes a proteger en meme temps : l'infrastructure des institutions, et le jugement de chaque utilisateur au moment ou il recoit un message.</p>
+        <p class="problem-figure" data-i18n="problem3_fig">2</p>
+        <p class="problem-text" data-i18n="problem3_txt">cibles distinctes a proteger en meme temps : l'infrastructure des institutions, et le jugement de chaque utilisateur au moment ou il recoit un message.</p>
       </div>
     </div>
   </section>
 
   <!-- ===== COMMENT CA MARCHE ===== -->
   <section class="section how" id="comment">
-    <p class="section-eyebrow">Comment ca marche</p>
-    <h2>Deux intelligences artificielles, une seule base technique.</h2>
+    <p class="section-eyebrow" data-i18n="how_eyebrow">Comment ca marche</p>
+    <h2 data-i18n="how_h2">Deux intelligences artificielles, une seule base technique.</h2>
 
     <div class="how-grid">
       <article class="how-card">
-        <p class="how-tag">Machine learning supervise</p>
-        <h3>Le moteur de detection</h3>
-        <p>Un arbre de decision optimise, entraine et valide sur 50 000 flux reseau, reconnait une attaque
+        <p class="how-tag" data-i18n="how1_tag">Machine learning supervise</p>
+        <h3 data-i18n="how1_h3">Le moteur de detection</h3>
+        <p data-i18n="how1_p">Un arbre de decision optimise, entraine et valide sur 50 000 flux reseau, reconnait une attaque
            a partir de 5 variables cle : volume de donnees, taux de paquets, ports sollicites, erreurs de
            checksum, frequence des signaux de connexion.</p>
         <ul class="how-stats">
-          <li><strong>99,04&nbsp;%</strong> d'exactitude en test</li>
-          <li><strong>99,92&nbsp;%</strong> d'AUC macro</li>
-          <li>Valide en conditions de type SOC</li>
+          <li data-i18n="how1_s1"><strong>99,04&nbsp;%</strong> d'exactitude en test</li>
+          <li data-i18n="how1_s2"><strong>99,92&nbsp;%</strong> d'AUC macro</li>
+          <li data-i18n="how1_s3">Valide en conditions de type SOC</li>
         </ul>
       </article>
 
       <article class="how-card">
-        <p class="how-tag">IA generative</p>
-        <h3>Lieutenant Cyber</h3>
-        <p>Un assistant conversationnel (propulse par Google Gemini) auquel un citoyen decrit un SMS ou un
+        <p class="how-tag" data-i18n="how2_tag">IA generative</p>
+        <h3 data-i18n="how2_h3">Lieutenant Cyber</h3>
+        <p data-i18n="how2_p">Un assistant conversationnel (propulse par Google Gemini) auquel un citoyen decrit un SMS ou un
            appel suspect, en langage naturel ou a l'oral. Il explique le risque simplement, sans jargon,
            et sans jamais collecter de donnee personnelle.</p>
         <ul class="how-stats">
-          <li>Disponible cote Organisation et Grand Public</li>
-          <li>Complete par un jeu de vigilance gamifie</li>
-          <li>Zero collecte de donnees personnelles</li>
+          <li data-i18n="how2_s1">Disponible cote Organisation et Grand Public</li>
+          <li data-i18n="how2_s2">Complete par un jeu de vigilance gamifie</li>
+          <li data-i18n="how2_s3">Zero collecte de donnees personnelles</li>
         </ul>
       </article>
     </div>
@@ -112,39 +115,39 @@
 
   <!-- ===== LES DEUX ESPACES (fonctionnel) ===== -->
   <section class="section spaces" id="espaces">
-    <p class="section-eyebrow">La plateforme</p>
-    <h2>Choisissez votre espace</h2>
+    <p class="section-eyebrow" data-i18n="spaces_eyebrow">La plateforme</p>
+    <h2 data-i18n="spaces_h2">Choisissez votre espace</h2>
 
     <div class="cards">
       <div class="card">
-        <h3>🏢 Espace Organisation</h3>
-        <p>Tableau de bord technique : detection en temps reel, analyse de logs, surveillance en direct,
+        <h3 data-i18n="card_org_h3">🏢 Espace Organisation</h3>
+        <p data-i18n="card_org_p">Tableau de bord technique : detection en temps reel, analyse de logs, surveillance en direct,
            journal d'alertes. Pour les equipes IT/securite des fintechs, operateurs mobile money,
            institutions financieres et administrations.</p>
-        <a class="btn" id="link-organisation" href="#">Entrer dans l'Espace Organisation →</a>
+        <a class="btn" id="link-organisation" href="#" data-i18n="card_org_cta">Entrer dans l'Espace Organisation →</a>
       </div>
       <div class="card">
-        <h3>👥 Espace Grand Public</h3>
-        <p>Discutez avec Lieutenant Cyber, testez vos reflexes face aux arnaques mobile money, et aidez
+        <h3 data-i18n="card_public_h3">👥 Espace Grand Public</h3>
+        <p data-i18n="card_public_p">Discutez avec Lieutenant Cyber, testez vos reflexes face aux arnaques mobile money, et aidez
            a en reperer de nouvelles - sans jamais partager d'information personnelle.</p>
-        <a class="btn" href="public.html">Entrer dans l'Espace Grand Public →</a>
+        <a class="btn" href="public.html" data-i18n="card_public_cta">Entrer dans l'Espace Grand Public →</a>
       </div>
     </div>
   </section>
 
   <!-- ===== PREUVE TECHNIQUE ===== -->
   <section class="section proof">
-    <p class="section-eyebrow">Base technique validee</p>
+    <p class="section-eyebrow" data-i18n="proof_eyebrow">Base technique validee</p>
     <div class="proof-grid">
-      <div class="proof-item"><p class="proof-figure">50&nbsp;000</p><p class="proof-label">flux reseau analyses</p></div>
-      <div class="proof-item"><p class="proof-figure">5</p><p class="proof-label">algorithmes compares avant selection</p></div>
-      <div class="proof-item"><p class="proof-figure">111</p><p class="proof-label">tests automatises</p></div>
-      <div class="proof-item"><p class="proof-figure">5</p><p class="proof-label">variables retenues sur le modele final</p></div>
+      <div class="proof-item"><p class="proof-figure">50&nbsp;000</p><p class="proof-label" data-i18n="proof1_label">flux reseau analyses</p></div>
+      <div class="proof-item"><p class="proof-figure">5</p><p class="proof-label" data-i18n="proof2_label">algorithmes compares avant selection</p></div>
+      <div class="proof-item"><p class="proof-figure">111</p><p class="proof-label" data-i18n="proof3_label">tests automatises</p></div>
+      <div class="proof-item"><p class="proof-figure">5</p><p class="proof-label" data-i18n="proof4_label">variables retenues sur le modele final</p></div>
     </div>
-    <p class="proof-note">Prototype technique valide, pas encore deploye aupres d'utilisateurs ou de partenaires reels.</p>
+    <p class="proof-note" data-i18n="proof_note">Prototype technique valide, pas encore deploye aupres d'utilisateurs ou de partenaires reels.</p>
   </section>
 
-  <p class="footer-note">
+  <p class="footer-note" data-i18n="footer_note_index">
     Kimatey FinNet Guard - Realise par Komoe Edgar Junior - Projet ML Master 1 UFRMI - Responsable de
     l'enseignement : Dr ASSOHOUN E Stanislas. L'Espace Organisation reste servi par l'application Streamlit
     existante (deep-link direct) ; l'Espace Grand Public est une page web independante consommant
@@ -152,6 +155,7 @@
   </p>
 </div>
 
+<script src="i18n.js"></script>
 <script>
   document.getElementById("link-organisation").href = ORG_APP_URL + "/?view=organisation";
 </script>
