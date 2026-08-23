@@ -11,5 +11,5 @@
  *   d'accueil pointe vers "<ORG_APP_URL>/?view=organisation" pour entrer
  *   directement dans l'espace, sans repasser par la page d'accueil Streamlit.
  */
-const API_BASE_URL = "http://localhost:8000";
-const ORG_APP_URL = "http://localhost:8501";
+const API_BASE_URL = "https://kimatey-finnet-guard.onrender.com";
+const ORG_APP_URL = "https://kimatey-finnet-guard.streamlit.app";
