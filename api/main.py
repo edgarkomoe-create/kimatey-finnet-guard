@@ -33,6 +33,7 @@ from api.schemas import (
     AssistantChatRequest, AssistantChatResponse, TemoignageRequest, TemoignageResponse,
     TemoignagesCountResponse, GameCategoryOut, GameMetaOut,
     ExplainFlowRequest, ExplainBatchRequest, ExplainResponse,
+    PublicProgressIn, PublicProgressOut,
 )
 from api.model_service import get_model_service, CLASS_NAMES
 from api.auth import (
@@ -447,3 +448,68 @@ def temoignage(payload: TemoignageRequest):
 )
 def temoignages_count():
     return TemoignagesCountResponse(count=_count_temoignages())
+
+
+# ==================================================================
+# Compte optionnel (Espace Grand Public) : synchronisation de la progression
+# ==================================================================
+# Reutilise TEL QUEL l'authentification 'self_signup' (POST /auth/register,
+# POST /auth/login) deja construite pour l'Espace Organisation : c'est un
+# mecanisme generique (email + mot de passe, jeton signe), pas specifique a
+# une organisation. Aucune duplication de code d'authentification.
+#
+# IMPORTANT (coherence avec le positionnement "sans compte, zero donnee
+# personnelle" de l'Espace Grand Public) : ce compte reste STRICTEMENT
+# OPTIONNEL. Sans compte, tout continue de fonctionner exactement comme avant
+# (progression stockee uniquement dans le navigateur, localStorage). Le compte
+# ne sert qu'a synchroniser cette meme progression entre plusieurs appareils
+# pour qui le souhaite explicitement.
+PUBLIC_PROGRESS_FILE = Path(__file__).resolve().parent / "public_progress.json"
+
+
+def _load_public_progress() -> dict:
+    if not PUBLIC_PROGRESS_FILE.exists():
+        return {}
+    with open(PUBLIC_PROGRESS_FILE) as f:
+        return json.load(f)
+
+
+def _save_public_progress(data: dict) -> None:
+    PUBLIC_PROGRESS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(PUBLIC_PROGRESS_FILE, "w") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+
+@app.post(
+    "/public/progress", response_model=PublicProgressOut, tags=["Grand Public"],
+    summary="Sauvegarde la progression du jeu de vigilance pour le compte connecte (optionnel)",
+    dependencies=[],
+)
+def save_public_progress(payload: PublicProgressIn, user=Depends(require_org_auth)):
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Compte requis pour synchroniser la progression (optionnel : sans compte, votre progression reste sauvegardee localement dans ce navigateur).",
+        )
+    email = user["org_id"]  # en mode self_signup, l'email joue le role d'identifiant de compte
+    all_progress = _load_public_progress()
+    all_progress[email] = {"state": payload.state, "updated_at": time.time()}
+    _save_public_progress(all_progress)
+    return PublicProgressOut(state=payload.state, updated_at=all_progress[email]["updated_at"])
+
+
+@app.get(
+    "/public/progress", response_model=PublicProgressOut, tags=["Grand Public"],
+    summary="Recupere la derniere progression sauvegardee pour le compte connecte (optionnel)",
+)
+def get_public_progress(user=Depends(require_org_auth)):
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Compte requis pour recuperer une progression synchronisee.",
+        )
+    email = user["org_id"]
+    entry = _load_public_progress().get(email)
+    if not entry:
+        return PublicProgressOut(state=None, updated_at=None)
+    return PublicProgressOut(state=entry["state"], updated_at=entry["updated_at"])

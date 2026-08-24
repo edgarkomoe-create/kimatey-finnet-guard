@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kimatey FinNet Guard - Espace Grand Public</title>
 <link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 <script src="config.js"></script>
@@ -45,6 +47,7 @@
     <div class="chat-box" id="chat-box"></div>
     <div class="chat-input-row">
       <input type="text" id="chat-input" data-i18n-placeholder="chat_placeholder" placeholder="Écrivez votre question ici..." />
+      <button class="btn secondary" id="chat-mic" title="Poser la question à l'oral" data-i18n="mic_btn">🎤</button>
       <button class="btn" id="chat-send" data-i18n="chat_send">Envoyer</button>
     </div>
     <p class="hint" data-i18n="chat_voice_hint">🔊 Les réponses de l'assistant sont lues à voix haute automatiquement (synthèse vocale du navigateur).</p>
@@ -68,11 +71,13 @@
       dans votre navigateur (pas de compte requis) et survit à une fermeture de la page.
     </p>
     <p class="hint" style="font-style:italic" data-i18n="game_lang_note">🌍 Les scénarios du quiz et les échanges avec Lieutenant Cyber restent en français pour le moment, quelle que soit la langue choisie ici.</p>
+    <div id="account-container"></div>
     <div id="game-header-container"></div>
     <div id="category-tabs-container"></div>
     <div id="mascot-container"></div>
     <div id="quiz-container"></div>
     <div id="badges-container"></div>
+    <div id="certificate-cta-container"></div>
 
     <h3 style="margin-top:2rem" data-i18n="report_h3">🤝 Racontez à Lieutenant Cyber ce qui vous est arrivé</h3>
     <p class="hint" data-i18n="report_hint">
@@ -81,6 +86,20 @@
     </p>
     <div id="report-container"></div>
   </div>
+</div>
+
+<!-- Gabarit du certificat, rendu hors-ecran puis capture en image par html2canvas -->
+<div id="certificate-template" style="position:fixed; left:-9999px; top:0; width:900px; height:636px; background:linear-gradient(135deg,#0b1e33 0%,#12314f 100%); border:10px solid #00d4b5; box-sizing:border-box; padding:50px; font-family:'Space Grotesk',Segoe UI,sans-serif; color:#f4f8fb;">
+  <div style="text-align:center; font-size:14px; letter-spacing:3px; color:#00d4b5; text-transform:uppercase;">🛡️ Kimatey FinNet Guard</div>
+  <div style="text-align:center; font-size:34px; font-weight:700; margin-top:18px;" id="cert-title">Certificat Citoyen Engagé</div>
+  <div style="text-align:center; font-size:16px; color:#9fb3d1; margin-top:6px;" id="cert-subtitle">Sécurité &amp; veille numérique</div>
+  <div style="text-align:center; font-size:26px; margin-top:46px; padding-bottom:10px; border-bottom:2px solid #00d4b5; display:inline-block; width:100%;" id="cert-name">Citoyen Vigilant</div>
+  <div style="text-align:center; font-size:15px; color:#d7e2ec; margin-top:34px; line-height:1.7;" id="cert-body">
+    A activement participé au programme de sensibilisation Kimatey FinNet Guard contre la fraude mobile money,
+    en démontrant vigilance et engagement communautaire.
+  </div>
+  <div style="display:flex; justify-content:center; gap:60px; margin-top:36px;" id="cert-stats"></div>
+  <div style="text-align:center; font-size:12px; color:#7d8ea3; margin-top:50px;" id="cert-date">Délivré le --</div>
 </div>
 
 <div class="balloons" id="balloons"></div>
@@ -186,6 +205,56 @@ document.getElementById("chat-send").addEventListener("click", sendChatMessage);
 document.getElementById("chat-input").addEventListener("keydown", (e) => {
   if (e.key === "Enter") sendChatMessage();
 });
+
+// ---- Reconnaissance vocale en entree (Web Speech API - native navigateur, gratuite) ----
+// Meme principe cote sortie que la synthese vocale (speak()) : aucune cle API necessaire,
+// tout se passe dans le navigateur. Non supporte par tous les navigateurs (Chrome/Edge OK,
+// Firefox limite) : le bouton reste visible mais explique poliment l'indisponibilite.
+const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+const micBtn = document.getElementById("chat-mic");
+let recognizer = null;
+let listening = false;
+
+if (SpeechRecognitionAPI) {
+  recognizer = new SpeechRecognitionAPI();
+  recognizer.lang = "fr-FR";
+  recognizer.interimResults = false;
+  recognizer.maxAlternatives = 1;
+
+  recognizer.addEventListener("result", (event) => {
+    const transcript = event.results[0][0].transcript;
+    document.getElementById("chat-input").value = transcript;
+    sendChatMessage();
+  });
+  recognizer.addEventListener("end", () => {
+    listening = false;
+    micBtn.classList.remove("mic-active");
+  });
+  recognizer.addEventListener("error", () => {
+    listening = false;
+    micBtn.classList.remove("mic-active");
+  });
+
+  micBtn.addEventListener("click", () => {
+    if (listening) {
+      recognizer.stop();
+      return;
+    }
+    listening = true;
+    micBtn.classList.add("mic-active");
+    try {
+      recognizer.start();
+    } catch (e) {
+      listening = false;
+      micBtn.classList.remove("mic-active");
+    }
+  });
+} else {
+  micBtn.addEventListener("click", () => {
+    alert(t("mic_unsupported"));
+  });
+}
+
 renderChat();
 
 // ==========================================================================
@@ -211,6 +280,7 @@ function loadGameState() {
 
 function saveGameState() {
   try { localStorage.setItem(GAME_STORAGE_KEY, JSON.stringify(gameState)); } catch (e) { /* ignore */ }
+  pushProgressToServer(); // sans effet si aucun compte connecte (voir definition plus bas)
 }
 
 function computeLevel(xp, levels) {
@@ -382,9 +452,111 @@ function renderAll() {
   renderMascot();
   renderQuiz();
   renderBadges();
+  renderCertificateCTA();
   // renderCategoryTabs() recree le <select> d'age : reattacher son ecouteur pour renderMascot().
   const ageSelect = document.getElementById("age-band-select");
   if (ageSelect) ageSelect.addEventListener("change", renderMascot);
+}
+
+// ==========================================================================
+// Certificat "Citoyen Engage - Securite & veille numerique"
+// Condition combinee (coherente avec la logique de gamification existante) :
+//   - au moins CERT_XP_THRESHOLD Points Bouclier
+//   - au moins CERT_MIN_BADGES badges debloques
+//   - ET (avoir termine tous les scenarios d'au moins une categorie OU avoir
+//     soumis un temoignage a la communaute)
+// Genere cote client uniquement (html2canvas + jsPDF, aucune dependance serveur) :
+// coherent avec le fonctionnement anonyme/sans-compte actuel de cet espace.
+// ==========================================================================
+const CERT_XP_THRESHOLD = 50;
+const CERT_MIN_BADGES = 2;
+
+function hasCompletedACategory() {
+  return gameCategories.some((c) => (gameState.quizIndex[c.key] || 0) >= c.scenarios.length && c.scenarios.length > 0);
+}
+
+function isCertificateEligible() {
+  if (!gameMeta) return false;
+  const unlocked = unlockedBadges(gameState.xp, gameMeta.badges).length;
+  const combo = hasCompletedACategory() || reportDone;
+  return gameState.xp >= CERT_XP_THRESHOLD && unlocked >= CERT_MIN_BADGES && combo;
+}
+
+function renderCertificateCTA() {
+  const el = document.getElementById("certificate-cta-container");
+  if (!el) return;
+  if (!isCertificateEligible()) {
+    const unlocked = gameMeta ? unlockedBadges(gameState.xp, gameMeta.badges).length : 0;
+    el.innerHTML = '<p class="hint" style="margin-top:1rem">' + t("cert_locked_hint")
+      .replace("{xp}", CERT_XP_THRESHOLD).replace("{badges}", CERT_MIN_BADGES) + '</p>';
+    return;
+  }
+  el.innerHTML =
+    '<div class="scenario-box" style="margin-top:1.2rem">' +
+      '<b>🏅 ' + t("cert_unlocked_title") + '</b><br>' +
+      '<span class="hint">' + t("cert_unlocked_hint") + '</span><br><br>' +
+      '<label style="display:block; margin-bottom:.6rem;">' + t("cert_name_label") +
+        '<input type="text" id="cert-name-input" placeholder="' + t("cert_name_placeholder") + '" maxlength="40" style="margin-left:.5rem; padding:.3rem .5rem; border-radius:6px; border:1px solid rgba(255,255,255,.25); background:transparent; color:inherit;"></label>' +
+      '<button class="btn" id="cert-download-pdf">' + t("cert_download_pdf") + '</button> ' +
+      '<button class="btn secondary" id="cert-download-png">' + t("cert_download_png") + '</button> ' +
+      '<button class="btn secondary" id="cert-share">' + t("cert_share") + '</button>' +
+    '</div>';
+
+  document.getElementById("cert-download-pdf").addEventListener("click", () => generateCertificate("pdf"));
+  document.getElementById("cert-download-png").addEventListener("click", () => generateCertificate("png"));
+  document.getElementById("cert-share").addEventListener("click", shareCertificate);
+}
+
+function fillCertificateTemplate() {
+  const nameInput = document.getElementById("cert-name-input");
+  const name = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : t("cert_default_name");
+  document.getElementById("cert-title").textContent = t("cert_title");
+  document.getElementById("cert-subtitle").textContent = t("cert_subtitle");
+  document.getElementById("cert-name").textContent = name;
+  document.getElementById("cert-body").textContent = t("cert_body");
+  document.getElementById("cert-date").textContent = t("cert_date_prefix") + new Date().toLocaleDateString(getLang() === "fr" ? "fr-FR" : "en-GB");
+  const unlocked = unlockedBadges(gameState.xp, gameMeta.badges).length;
+  document.getElementById("cert-stats").innerHTML =
+    '<div style="text-align:center"><div style="font-size:28px;font-weight:700;color:#00d4b5">' + gameState.xp + '</div><div style="font-size:11px;color:#9fb3d1">' + t("cert_stat_points") + '</div></div>' +
+    '<div style="text-align:center"><div style="font-size:28px;font-weight:700;color:#00d4b5">' + unlocked + '</div><div style="font-size:11px;color:#9fb3d1">' + t("cert_stat_badges") + '</div></div>';
+}
+
+async function generateCertificate(format) {
+  fillCertificateTemplate();
+  const node = document.getElementById("certificate-template");
+  const canvas = await html2canvas(node, { scale: 2, backgroundColor: null });
+  if (format === "png") {
+    const link = document.createElement("a");
+    link.download = "Certificat_Kimatey_FinNet_Guard.png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  } else {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: [canvas.width, canvas.height] });
+    pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, canvas.width, canvas.height);
+    pdf.save("Certificat_Kimatey_FinNet_Guard.pdf");
+  }
+}
+
+async function shareCertificate() {
+  const shareText = t("cert_share_text") + " https://kimatey-finnet-guard.vercel.app";
+  fillCertificateTemplate();
+  try {
+    const node = document.getElementById("certificate-template");
+    const canvas = await html2canvas(node, { scale: 2, backgroundColor: null });
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    const file = new File([blob], "certificat-kimatey.png", { type: "image/png" });
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ text: shareText, files: [file] });
+      return;
+    }
+  } catch (e) { /* repli sur la copie presse-papier ci-dessous */ }
+  try {
+    await navigator.clipboard.writeText(shareText);
+    alert(t("cert_share_copied"));
+  } catch (e) {
+    alert(shareText);
+  }
 }
 
 async function loadGame() {
@@ -445,6 +617,7 @@ async function submitTemoignage(detail) {
   }
   reportDone = true;
   renderReport();
+  renderCertificateCTA();
   launchBalloons();
 }
 
@@ -528,6 +701,113 @@ async function loadReportSteps() {
   }
   renderReport();
 }
+
+// ==========================================================================
+// Compte optionnel : synchronisation de la progression entre appareils.
+// STRICTEMENT FACULTATIF - sans compte, tout continue de fonctionner comme
+// avant (progression uniquement dans le navigateur). Reutilise l'auth
+// 'self_signup' deja construite pour l'Espace Organisation (email + mot de
+// passe, meme mecanisme de jeton).
+// ==========================================================================
+const PUBLIC_TOKEN_KEY = "kimatey_public_token";
+const PUBLIC_EMAIL_KEY = "kimatey_public_email";
+
+function getPublicToken() { return localStorage.getItem(PUBLIC_TOKEN_KEY); }
+function setPublicSession(token, email) {
+  localStorage.setItem(PUBLIC_TOKEN_KEY, token);
+  localStorage.setItem(PUBLIC_EMAIL_KEY, email);
+}
+function clearPublicSession() {
+  localStorage.removeItem(PUBLIC_TOKEN_KEY);
+  localStorage.removeItem(PUBLIC_EMAIL_KEY);
+}
+
+function renderAccount() {
+  const el = document.getElementById("account-container");
+  if (!el) return;
+  const token = getPublicToken();
+  const email = localStorage.getItem(PUBLIC_EMAIL_KEY);
+
+  if (token && email) {
+    el.innerHTML =
+      '<div class="hint" style="margin-bottom:.8rem">' + t("account_connected_as") + ' <b>' + email + '</b> ' +
+      '<button class="btn secondary" id="account-logout" style="margin-left:.6rem">' + t("account_logout") + '</button></div>';
+    document.getElementById("account-logout").addEventListener("click", () => {
+      clearPublicSession();
+      renderAccount();
+    });
+    return;
+  }
+
+  el.innerHTML =
+    '<details style="margin-bottom:1rem"><summary style="cursor:pointer">' + t("account_toggle") + '</summary>' +
+    '<div style="margin-top:.7rem">' +
+      '<p class="hint">' + t("account_hint") + '</p>' +
+      '<input type="email" id="account-email" placeholder="' + t("account_email_placeholder") + '" style="margin-right:.5rem; padding:.3rem .5rem; border-radius:6px; border:1px solid rgba(255,255,255,.25); background:transparent; color:inherit;">' +
+      '<input type="password" id="account-password" placeholder="' + t("account_password_placeholder") + '" style="margin-right:.5rem; padding:.3rem .5rem; border-radius:6px; border:1px solid rgba(255,255,255,.25); background:transparent; color:inherit;">' +
+      '<button class="btn" id="account-register">' + t("account_register") + '</button> ' +
+      '<button class="btn secondary" id="account-login">' + t("account_login") + '</button>' +
+      '<div id="account-error" class="hint" style="color:#e5484d"></div>' +
+    '</div></details>';
+
+  document.getElementById("account-register").addEventListener("click", () => submitAccount("register"));
+  document.getElementById("account-login").addEventListener("click", () => submitAccount("login"));
+}
+
+async function submitAccount(mode) {
+  const email = document.getElementById("account-email").value.trim();
+  const password = document.getElementById("account-password").value;
+  const errorEl = document.getElementById("account-error");
+  errorEl.textContent = "";
+  if (!email || !password) { errorEl.textContent = t("account_missing_fields"); return; }
+  try {
+    const r = await fetch(API_BASE_URL + "/auth/" + mode, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const body = await r.json();
+    if (!r.ok) { errorEl.textContent = body.detail || t("account_error_generic"); return; }
+    setPublicSession(body.token, email);
+    renderAccount();
+    await syncAfterLogin();
+  } catch (e) {
+    errorEl.textContent = t("account_server_error");
+  }
+}
+
+// Au moment de la connexion : si une progression existe deja cote serveur
+// (autre appareil), on la recupere et on remplace l'etat local ; sinon, on
+// pousse l'etat local actuel comme premiere sauvegarde.
+async function syncAfterLogin() {
+  const token = getPublicToken();
+  if (!token) return;
+  try {
+    const r = await fetch(API_BASE_URL + "/public/progress", { headers: { Authorization: "Bearer " + token } });
+    const body = await r.json();
+    if (body.state) {
+      gameState = body.state;
+      saveGameState();
+    } else {
+      await pushProgressToServer();
+    }
+    renderAll();
+  } catch (e) { /* echec silencieux : la progression locale reste valable */ }
+}
+
+async function pushProgressToServer() {
+  const token = getPublicToken();
+  if (!token) return; // pas de compte : rien a synchroniser, comportement normal
+  try {
+    await fetch(API_BASE_URL + "/public/progress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify({ state: gameState }),
+    });
+  } catch (e) { /* echec silencieux : la progression reste sauvegardee localement */ }
+}
+
+renderAccount();
 
 loadGame();
 loadReportSteps();

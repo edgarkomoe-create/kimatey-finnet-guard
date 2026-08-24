@@ -105,6 +105,20 @@ class RegisterResponse(BaseModel):
     message: str
 
 
+# ---------------------------------------------------------------- Compte optionnel (Espace Grand Public)
+class PublicProgressIn(BaseModel):
+    """Sauvegarde optionnelle de la progression du jeu de vigilance, associee
+    au compte connecte (reutilise l'authentification 'self_signup' existante).
+    Entierement facultatif : sans compte, la progression reste locale au
+    navigateur (localStorage) comme aujourd'hui."""
+    state: dict = Field(..., description="Etat serialise du jeu (xp, hearts, badges, categorie, progression par categorie)")
+
+
+class PublicProgressOut(BaseModel):
+    state: Optional[dict] = Field(None, description="Dernier etat sauvegarde pour ce compte, ou null si aucun")
+    updated_at: Optional[float] = None
+
+
 # ---------------------------------------------------------------- Espace Grand Public
 class ScenarioOut(BaseModel):
     situation: str

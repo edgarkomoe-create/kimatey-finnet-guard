@@ -103,6 +103,9 @@ body {
 .bubble.error { align-self: flex-start; background: rgba(231, 76, 60, 0.18); border: 1px solid rgba(231,76,60,0.5); color: var(--text-light); }
 
 .chat-input-row { display: flex; gap: .6rem; }
+#chat-mic { flex-shrink: 0; padding-left: .9rem; padding-right: .9rem; }
+#chat-mic.mic-active { background: var(--danger, #e5484d); color: #fff; animation: mic-pulse 1.2s ease-in-out infinite; }
+@keyframes mic-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
 .chat-input-row input[type=text] {
   flex: 1; padding: .65rem .8rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);
   background: var(--navy); color: var(--text-light); font-size: .92rem;
