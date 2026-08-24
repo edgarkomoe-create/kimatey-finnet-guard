@@ -954,8 +954,8 @@ def render_public_view():
 
         st.markdown("### 🧠 Jeu de vigilance : sauriez-vous reperer le piege ?")
         st.caption(
-            "Mecanique inspiree de l'Espace Jeux VIE (VIE Water Care) - niveaux, Points Bouclier, vies, "
-            "mascottes et categories thematiques - adaptee a la fraude mobile money. **Difference assumee "
+            "Mecanique de gamification - niveaux, Points Bouclier, vies, mascottes et categories "
+            "thematiques - adaptee a la fraude mobile money. **Difference assumee "
             "et volontaire : les Points Bouclier n'ont ici aucune valeur monetaire ni conversion en argent "
             "reel.** Dans une application qui lutte contre la fraude financiere, une fausse 'monnaie' qui se "
             "convertit en valeur reelle aurait envoye le mauvais signal - c'est un indicateur de progression "
@@ -987,7 +987,7 @@ def render_public_view():
         # besoin d'un st.rerun() qui effacerait le message de feedback.
         header_placeholder = st.empty()
 
-        # ---- Selection de categorie (tabs thematiques, comme l'Espace Jeux VIE) ---------------------
+        # ---- Selection de categorie (tabs thematiques) ---------------------
         cat_labels = [f"{c['emoji']} {c['label']}" for c in GAME_CATEGORIES]
         cat_keys = [c["key"] for c in GAME_CATEGORIES]
         current_cat_idx = cat_keys.index(st.session_state.game_category) if st.session_state.game_category in cat_keys else 0

@@ -164,11 +164,11 @@ REPORT_STEPS = [
 ]
 
 
-# ---------------------------------------------------------------- Sensibilisation ludique (fusion avec le
-# modele de gamification "Espace Jeux VIE" / VIE Water Care : niveaux, points de progression, vies, mascottes,
-# categories thematiques, badges). Adapte au domaine fraude/mobile money, avec une difference assumee et
-# volontaire : ici, la "monnaie" du jeu (Points Bouclier) n'a AUCUNE conversion en argent ni en recompense
-# reelle - dans une application qui lutte contre la fraude financiere, imiter une monnaie qui se convertit en
+# ---------------------------------------------------------------- Sensibilisation ludique (mecanique de
+# gamification : niveaux, points de progression, vies, mascottes, categories thematiques, badges). Adapte
+# au domaine fraude/mobile money, avec une difference assumee et volontaire : ici, la "monnaie" du jeu
+# (Points Bouclier) n'a AUCUNE conversion en argent ni en recompense reelle - dans une application qui lutte
+# contre la fraude financiere, imiter une monnaie qui se convertit en
 # valeur reelle aurait envoye le mauvais signal. C'est un indicateur de progression et de vigilance, point.
 XP_PER_CORRECT = 15
 XP_PER_INCORRECT = 5

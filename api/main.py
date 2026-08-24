@@ -381,7 +381,7 @@ def assistant_chat(payload: AssistantChatRequest):
 
 @app.get(
     "/game/categories", response_model=list[GameCategoryOut], tags=["Grand Public"],
-    summary="Categories du jeu de vigilance (fusion avec le modele de gamification VIE Water Care)",
+    summary="Categories du jeu de vigilance",
 )
 def game_categories():
     return [

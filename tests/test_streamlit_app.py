@@ -260,8 +260,8 @@ class TestEspaceGrandPublic:
 
 
 class TestJeuDeVigilanceGamifie:
-    """Fusion avec le modele de gamification de l'Espace Jeux VIE (VIE Water Care) :
-    categories thematiques + mascottes, niveau/Points Bouclier, vies, badges."""
+    """Mecanique de gamification : categories thematiques + mascottes, niveau/Points Bouclier,
+    vies, badges."""
 
     def test_six_categories_thematiques_presentes(self, at):
         _goto_public(at)
@@ -281,8 +281,8 @@ class TestJeuDeVigilanceGamifie:
 
     def test_categorie_cyber_affiche_lieutenant_cyber_sans_reference_a_vivi(self, at):
         """Decision produit : une IA originale (Lieutenant Cyber, propre a Kimatey) anime
-        toutes les categories, y compris Cyber & Mots de Passe - sans faire apparaitre ViVi
-        (mascotte de VIE Water Care), pour ne pas creer de lien de marque non voulu."""
+        toutes les categories, y compris Cyber & Mots de Passe - sans faire reference a une
+        mascotte externe, pour ne pas creer de lien de marque non voulu."""
         _goto_public(at)
         cat_radio = next(r for r in at.radio if "categorie" in (r.label or "").lower())
         cyber_option = next(opt for opt in cat_radio.options if "Cyber" in opt)

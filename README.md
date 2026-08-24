@@ -119,8 +119,8 @@ Destiné directement aux citoyens, sans jargon technique :
   définie dans la variable d'environnement `GEMINI_API_KEY` avant de lancer Streamlit
   (`export GEMINI_API_KEY=votre_cle`). Sans clé, l'onglet reste utilisable pour saisir une clé de test,
   sans bloquer le reste de l'application,
-- un onglet **Sensibilisation**, désormais un **jeu de vigilance gamifié** (fusion assumée avec le
-  modèle de gamification de l'Espace Jeux VIE / VIE Water Care — voir section dédiée ci-dessous), et
+- un onglet **Sensibilisation**, désormais un **jeu de vigilance gamifié** (voir section dédiée
+  ci-dessous), et
   un **échange animé façon chat** avec l'assistant (et non un formulaire) qui pose une question à la
   fois avec des réponses rapides en boutons, pour aider à repérer de nouvelles techniques de fraude
   sans jamais demander d'information personnelle. Un dernier détail facultatif (texte ou audio) est
@@ -135,32 +135,30 @@ voir "Page d'accueil web + Espace Grand Public independants" ci-dessous. L'Espac
 de vivre dans Streamlit (outil interne), mais accepte maintenant un lien direct `?view=organisation`
 pour y entrer sans repasser par sa propre page d'accueil.
 
-## Jeu de vigilance gamifié (fusion avec l'Espace Jeux VIE / VIE Water Care)
+## Jeu de vigilance gamifié
 
-À la demande explicite (« ce modèle en fusion avec le modèle existant »), le mini-jeu de
-sensibilisation a été refondu en reprenant les mécaniques de l'Espace Jeux VIE de VIE Water Care —
-niveaux/XP, une monnaie de progression, un système de vies, des mascottes par catégorie, des
-catégories thématiques et des badges — adaptées au domaine de la fraude mobile money :
+Le mini-jeu de sensibilisation repose sur des mécaniques de gamification classiques — niveaux/XP,
+une monnaie de progression, un système de vies, des mascottes par catégorie, des catégories
+thématiques et des badges — adaptées spécifiquement au domaine de la fraude mobile money :
 
-- **6 catégories thématiques** (au lieu de Ferme/Village/Chance/Arcade/Savoir/Eco/Mots/Calme/Cyber de
-  VIE) : 📱 Mobile Money (les 3 scénarios historiques, inchangés), 🏦 Banque & Épargne,
+- **6 catégories thématiques** : 📱 Mobile Money (les 3 scénarios historiques, inchangés),
+  🏦 Banque & Épargne,
   📞 Ingénierie Sociale, 💬 Réseaux Sociaux, 🧓 Protection des Aînés, 🔐 Cyber & Mots de Passe —
   chacune avec 2 à 3 scénarios réels, un retour immédiat coloré (succès/erreur) et une **astuce**
   (`tip`) actionnable en plus de l'explication.
 - **Niveaux & Points Bouclier 🛡️** : chaque réponse rapporte des Points Bouclier (15 si correcte, 5
   si incorrecte — pour avoir essayé), qui font progresser à travers 5 niveaux (Recrue Vigilante →
-  Vigie Mobile Money → Gardien Cyber → Gardien d'Élite → Légende de la Vigilance). **Différence
-  assumée et volontaire par rapport à VIE Water Care** : les Points Bouclier n'ont ici *aucune*
-  conversion en argent ni en récompense réelle (VIE convertit ses gouttes en « VM »). Dans une
+  Vigie Mobile Money → Gardien Cyber → Gardien d'Élite → Légende de la Vigilance). **Décision de
+  design assumée** : les Points Bouclier n'ont ici *aucune*
+  conversion en argent ni en récompense réelle. Dans une
   application qui lutte contre la fraude financière, imiter une monnaie qui se convertit en valeur
   réelle aurait envoyé le mauvais signal — c'est uniquement un indicateur de progression et de
   vigilance.
 - **Vies ❤️** : 3 vies, perdues sur une mauvaise réponse, rechargeables à tout moment (simplification
-  assumée par rapport au minuteur de régénération réel de VIE — voir feuille de route).
+  assumée par rapport à un vrai minuteur de régénération — voir feuille de route).
 - **Une mascotte, propre à Kimatey** : **Lieutenant Cyber**, une création originale (pas un personnage
-  emprunté à un autre produit), anime les 6 catégories. Décision prise après discussion : une première
-  version faisait apparaître ViVi (mascotte de VIE Water Care) en clin d'œil dans la catégorie Cyber -
-  remplacée par Lieutenant Cyber pour ne pas créer de lien de marque non voulu entre les deux produits.
+  emprunté à un autre produit), anime les 6 catégories — une identité unique plutôt que plusieurs
+  mascottes différentes.
   Voir section « Lieutenant Cyber » ci-dessous : c'est la même IA que l'assistant conversationnel et que
   la nouvelle assistance à l'analyse de l'Espace Organisation - une identité unique plutôt que plusieurs
   entités disjointes.

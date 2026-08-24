@@ -71,9 +71,9 @@ class TestScenariosEtReportSteps:
 
 
 class TestJeuDeVigilanceGamifie:
-    """Fusion avec le modele de gamification de l'Espace Jeux VIE (VIE Water Care) :
-    categories thematiques, mascottes, niveaux et badges - exposes a l'identique de
-    ce qu'utilise l'application Streamlit (meme source : core/kimatey_core.py)."""
+    """Mecanique de gamification : categories thematiques, mascottes, niveaux et badges -
+    exposes a l'identique de ce qu'utilise l'application Streamlit (meme source :
+    core/kimatey_core.py)."""
 
     def test_game_categories_retourne_6_categories_bien_formees(self, client):
         r = client.get("/game/categories")
@@ -103,8 +103,8 @@ class TestJeuDeVigilanceGamifie:
     def test_toutes_categories_partagent_la_meme_ia_lieutenant_cyber(self, client):
         """Une seule IA originale (Lieutenant Cyber, propre a Kimatey) traverse toutes les
         categories - decision prise apres discussion avec l'utilisateur pour ne pas faire
-        apparaitre ViVi (mascotte de VIE Water Care), afin d'eviter tout lien de marque
-        non voulu avec ce produit."""
+        reference a une mascotte externe, afin d'eviter tout lien de marque non voulu avec
+        ce produit."""
         r = client.get("/game/categories")
         for cat in r.json():
             assert cat["mascot_name"] == "Lieutenant Cyber"
