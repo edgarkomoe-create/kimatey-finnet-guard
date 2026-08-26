@@ -1131,6 +1131,52 @@ def render_organisation_view():
                 st.info("L'historique du score se construit au fil des visites de cet onglet.")
 
         st.markdown("<br>", unsafe_allow_html=True)
+        st.subheader("Alertes par jour et par gravite")
+        st.write("Repartition quotidienne des alertes, ventilee par niveau de gravite - filtrable par periode.")
+
+        if alert_log:
+            df_alerts_all = pd.DataFrame(alert_log)
+            df_alerts_all["Horodatage_dt"] = pd.to_datetime(df_alerts_all["Horodatage"])
+            date_min = df_alerts_all["Horodatage_dt"].min().date()
+            date_max = df_alerts_all["Horodatage_dt"].max().date()
+
+            date_range = st.date_input(
+                "Periode", value=(date_min, date_max), min_value=date_min, max_value=date_max,
+                key="alert_date_range",
+            )
+            if isinstance(date_range, tuple) and len(date_range) == 2:
+                start_date, end_date = date_range
+            else:
+                start_date, end_date = date_min, date_max
+
+            mask = (df_alerts_all["Horodatage_dt"].dt.date >= start_date) & (df_alerts_all["Horodatage_dt"].dt.date <= end_date)
+            df_filtered_alerts = df_alerts_all[mask]
+
+            if df_filtered_alerts.empty:
+                st.info("Aucune alerte sur cette periode.")
+            else:
+                df_filtered_alerts = df_filtered_alerts.copy()
+                df_filtered_alerts["Jour"] = df_filtered_alerts["Horodatage_dt"].dt.date
+                pivot = df_filtered_alerts.groupby(["Jour", "Menace"]).size().unstack(fill_value=0)
+
+                fig, ax = plt.subplots(figsize=(11, 4))
+                colors_map = {"Scan de Ports / Reconnaissance": CLASS_COLORS[1],
+                              "Attaque DDoS / Volumetrique": CLASS_COLORS[2],
+                              "Infiltration / Brute-Force / Exfiltration": CLASS_COLORS[3]}
+                for menace in pivot.columns:
+                    ax.plot(pivot.index.astype(str), pivot[menace], marker="o", markersize=3,
+                            label=menace, color=colors_map.get(menace, TEAL))
+                ax.set_ylabel("Nombre d'alertes")
+                ax.legend(fontsize=8, loc="upper left")
+                plt.xticks(rotation=30, ha="right", fontsize=8)
+                style_dark_fig(fig, ax)
+                fig.tight_layout()
+                st.pyplot(fig)
+                plt.close(fig)
+        else:
+            st.info("Aucune alerte enregistree pour l'instant.")
+
+        st.markdown("<br>", unsafe_allow_html=True)
         st.subheader("Journal des alertes")
         st.write("Chaque connexion jugee suspecte par le systeme apparait ici, la plus recente en premier. "
                  "Marquez une alerte comme traitee une fois l'investigation terminee.")
