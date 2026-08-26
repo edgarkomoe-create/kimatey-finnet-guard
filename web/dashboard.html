@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kimatey FinNet Guard - Dashboard SOC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="dashboard.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+</head>
+<body>
+<script src="config.js"></script>
+
+<div class="dash-page">
+
+  <nav class="dash-nav">
+    <a href="index.html" class="dash-nav-brand"><span class="shield">🛡️</span> Kimatey FinNet Guard</a>
+    <div id="nav-actions"></div>
+  </nav>
+
+  <!-- ===== Ecran de connexion ===== -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <h1>Dashboard SOC</h1>
+      <p class="login-sub">Connectez-vous avec votre compte Espace Organisation.</p>
+      <div class="login-tabs">
+        <button class="login-tab active" data-tab="login">Se connecter</button>
+        <button class="login-tab" data-tab="register">Creer un compte</button>
+      </div>
+      <div id="login-panel">
+        <input type="email" id="login-email" placeholder="Email">
+        <input type="password" id="login-password" placeholder="Mot de passe">
+        <button class="btn" id="login-submit" style="width:100%">Se connecter</button>
+      </div>
+      <div id="register-panel" style="display:none">
+        <input type="email" id="register-email" placeholder="Email">
+        <input type="password" id="register-password" placeholder="Mot de passe">
+        <button class="btn" id="register-submit" style="width:100%">Creer mon compte</button>
+      </div>
+      <div id="login-error" class="login-error"></div>
+    </div>
+  </div>
+
+  <!-- ===== Dashboard ===== -->
+  <div id="dashboard-screen" style="display:none">
+
+    <div class="dash-header">
+      <div>
+        <p class="eyebrow">Securite Reseau &middot; Espace Organisation</p>
+        <h1>Dashboard SOC</h1>
+      </div>
+      <div class="view-toggle">
+        <button class="view-toggle-btn active" data-view="simple">👔 Vue simple</button>
+        <button class="view-toggle-btn" data-view="technique">🔬 Vue technique</button>
+      </div>
+    </div>
+
+    <!-- ---- Vue simple ---- -->
+    <div id="view-simple">
+      <div id="simple-banner" class="simple-banner"></div>
+      <div id="simple-summary" class="simple-summary"></div>
+    </div>
+
+    <!-- ---- Vue technique ---- -->
+    <div id="view-technique" style="display:none">
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="score-gauge-wrap">
+            <svg viewBox="0 0 120 120" class="score-gauge">
+              <circle cx="60" cy="60" r="52" class="gauge-track"/>
+              <circle cx="60" cy="60" r="52" class="gauge-fill" id="gauge-fill"/>
+            </svg>
+            <div class="score-gauge-value" id="score-value">--</div>
+          </div>
+          <div class="kpi-label">Score de securite</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">🚨</div>
+          <div class="kpi-value" id="kpi-open">--</div>
+          <div class="kpi-label">Alertes ouvertes</div>
+          <div class="kpi-sub" id="kpi-closed-sub">--</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">✅</div>
+          <div class="kpi-value" id="kpi-treated">--</div>
+          <div class="kpi-label">Taux de traitement</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">⏱️</div>
+          <div class="kpi-value" id="kpi-mttr">--</div>
+          <div class="kpi-label">Temps moyen de resolution</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">📈</div>
+          <div class="kpi-value" id="kpi-trend">--</div>
+          <div class="kpi-label">Tendance (7 j)</div>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-card">
+          <p class="chart-title">Alertes ouvertes par gravite</p>
+          <canvas id="chart-severity"></canvas>
+        </div>
+        <div class="chart-card">
+          <p class="chart-title">Alertes par jour et par gravite (14 j)</p>
+          <canvas id="chart-timeline"></canvas>
+        </div>
+      </div>
+
+      <div class="alert-list-card">
+        <p class="chart-title">Journal des alertes</p>
+        <div id="alert-list"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="dashboard.js"></script>
+</body>
+</html>

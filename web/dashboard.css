@@ -1,0 +1,102 @@
+.dash-page { max-width: 1180px; margin: 0 auto; padding: 0 1.4rem 3rem; }
+.dash-page h1, .dash-page h3, .dash-nav-brand { font-family: "Space Grotesk", "Segoe UI", sans-serif; }
+
+.dash-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.4rem 0; position: sticky; top: 0; z-index: 20;
+  background: linear-gradient(var(--navy) 78%, transparent);
+}
+.dash-nav-brand { font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: .55rem; color: var(--text-light); text-decoration: none; }
+
+/* ---- Ecran de connexion ---- */
+.login-screen { display: flex; justify-content: center; padding: 3rem 0; }
+.login-card {
+  background: var(--navy-light); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;
+  padding: 2rem 1.8rem; width: 100%; max-width: 24rem;
+}
+.login-card h1 { font-size: 1.6rem; margin: 0 0 .4rem 0; }
+.login-sub { color: var(--text-muted); font-size: .9rem; margin: 0 0 1.4rem 0; }
+.login-tabs { display: flex; gap: .5rem; margin-bottom: 1.2rem; }
+.login-tab {
+  flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.15); color: var(--text-muted);
+  padding: .5rem; border-radius: 8px; cursor: pointer; font-size: .85rem; transition: all .15s ease;
+}
+.login-tab.active { background: rgba(0,212,181,0.12); border-color: var(--teal); color: var(--teal); }
+#login-panel input, #register-panel input {
+  width: 100%; box-sizing: border-box; margin-bottom: .8rem; padding: .6rem .8rem;
+  border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.03);
+  color: var(--text-light); font-size: .92rem;
+}
+.login-error { color: #e5484d; font-size: .85rem; margin-top: .8rem; min-height: 1.2rem; }
+
+/* ---- Header + toggle vue simple/technique ---- */
+.dash-header { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem; margin: 1rem 0 1.8rem 0; }
+.eyebrow { text-transform: uppercase; letter-spacing: .08em; font-size: .76rem; font-weight: 700; color: var(--teal); margin: 0 0 .3rem 0; }
+.dash-header h1 { font-size: 1.9rem; margin: 0; }
+.view-toggle { display: flex; gap: .5rem; background: var(--navy-light); border-radius: 999px; padding: .3rem; }
+.view-toggle-btn {
+  background: transparent; border: none; color: var(--text-muted); padding: .5rem 1rem; border-radius: 999px;
+  cursor: pointer; font-size: .85rem; transition: all .2s ease;
+}
+.view-toggle-btn.active { background: var(--teal); color: #06231d; font-weight: 700; }
+
+/* ---- Vue simple ---- */
+.simple-banner {
+  padding: 1.4rem 1.6rem; border-radius: 12px; border-left: 5px solid var(--teal);
+  background: rgba(0,212,181,0.1); font-size: 1.25rem; font-weight: 700; margin-bottom: 1.2rem;
+  animation: fade-in-up .4s ease-out;
+}
+.simple-summary { color: var(--text-light); font-size: .98rem; line-height: 1.7; }
+@keyframes fade-in-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ---- Grille KPI ---- */
+.kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1.6rem; }
+@media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+.kpi-card {
+  background: var(--navy-light); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px;
+  padding: 1.2rem; text-align: center; transition: transform .2s ease, border-color .2s ease;
+}
+.kpi-card:hover { transform: translateY(-3px); border-color: rgba(0,212,181,0.3); }
+.kpi-icon { font-size: 1.6rem; margin-bottom: .4rem; }
+.kpi-value { font-family: "Space Grotesk", sans-serif; font-size: 1.6rem; font-weight: 700; color: var(--text-light); }
+.kpi-label { font-size: .78rem; color: var(--text-muted); margin-top: .3rem; }
+.kpi-sub { font-size: .72rem; color: var(--text-muted); margin-top: .15rem; }
+
+/* ---- Jauge de score circulaire animee (signature de la page) ---- */
+.score-gauge-wrap { position: relative; width: 92px; height: 92px; margin: 0 auto .4rem auto; }
+.score-gauge { width: 100%; height: 100%; transform: rotate(-90deg); }
+.gauge-track { fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 10; }
+.gauge-fill {
+  fill: none; stroke: var(--teal); stroke-width: 10; stroke-linecap: round;
+  stroke-dasharray: 327; stroke-dashoffset: 327;
+  transition: stroke-dashoffset 1.1s cubic-bezier(.16,.8,.3,1), stroke 1.1s ease;
+}
+.score-gauge-value {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-family: "Space Grotesk", sans-serif; font-size: 1.3rem; font-weight: 700; color: var(--text-light);
+}
+@media (prefers-reduced-motion: reduce) { .gauge-fill { transition: none; } }
+
+/* ---- Graphiques ---- */
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-bottom: 1.6rem; }
+@media (max-width: 900px) { .chart-grid { grid-template-columns: 1fr; } }
+.chart-card { background: var(--navy-light); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1.2rem; }
+.chart-title { font-size: .9rem; font-weight: 700; margin: 0 0 .8rem 0; color: var(--text-light); }
+
+/* ---- Journal des alertes ---- */
+.alert-list-card { background: var(--navy-light); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1.2rem; }
+.alert-row {
+  display: flex; align-items: center; gap: .8rem; padding: .7rem 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+  font-size: .85rem; animation: fade-in-up .3s ease-out;
+}
+.alert-row:last-child { border-bottom: none; }
+.alert-status-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.alert-status-dot.open { background: #e74c3c; }
+.alert-status-dot.closed { background: #22c55e; }
+.alert-menace { flex: 1; color: var(--text-light); }
+.alert-date { color: var(--text-muted); font-size: .78rem; }
+.alert-toggle-btn {
+  background: transparent; border: 1px solid rgba(255,255,255,0.2); color: var(--text-muted);
+  border-radius: 6px; padding: .3rem .7rem; font-size: .76rem; cursor: pointer; transition: all .15s ease;
+}
+.alert-toggle-btn:hover { border-color: var(--teal); color: var(--teal); }
