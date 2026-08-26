@@ -33,7 +33,7 @@ from api.schemas import (
     AssistantChatRequest, AssistantChatResponse, TemoignageRequest, TemoignageResponse,
     TemoignagesCountResponse, GameCategoryOut, GameMetaOut,
     ExplainFlowRequest, ExplainBatchRequest, ExplainResponse,
-    PublicProgressIn, PublicProgressOut,
+    PublicProgressIn, PublicProgressOut, TendancesResponse,
 )
 from api.model_service import get_model_service, CLASS_NAMES
 from api.auth import (
@@ -41,7 +41,7 @@ from api.auth import (
     register_user, verify_user_credentials, EmailDejaUtilise,
 )
 from core.kimatey_core import (
-    GENAI_AVAILABLE, genai, ask_gemini, ASSISTANT_SYSTEM_PROMPT, ANONYMIZE_SYSTEM_PROMPT,
+    GENAI_AVAILABLE, genai, genai_types, ask_gemini, ASSISTANT_SYSTEM_PROMPT, ANONYMIZE_SYSTEM_PROMPT,
     ORG_ANALYST_SYSTEM_PROMPT, SCENARIOS, REPORT_STEPS, GAME_CATEGORIES, GAME_MASCOTS, LEVELS, BADGES,
     XP_PER_CORRECT, XP_PER_INCORRECT, MAX_HEARTS,
 )
@@ -379,6 +379,38 @@ def assistant_chat(payload: AssistantChatRequest):
     return AssistantChatResponse(reply=reply)
 
 
+@app.post(
+    "/assistant/chat_image", response_model=AssistantChatResponse, tags=["Grand Public"],
+    summary="Analyser une capture d'ecran (SMS/message suspect) avec l'assistant Kimatey",
+)
+async def assistant_chat_image(image: UploadFile = File(..., description="Capture d'ecran du SMS/message suspect (JPEG/PNG)"),
+                                message: str = ""):
+    if image.content_type not in ("image/jpeg", "image/png", "image/webp"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Format d'image non supporte. Utilisez JPEG, PNG ou WebP.",
+        )
+    image_bytes = await image.read()
+    if len(image_bytes) > 8 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Image trop volumineuse (8 Mo maximum).",
+        )
+    client = _get_gemini_client_or_503()
+    prompt_text = message.strip() or (
+        "Voici une capture d'ecran d'un SMS ou message que j'ai recu. Est-ce une arnaque mobile money ? "
+        "Explique pourquoi en langage simple."
+    )
+    # Contenu multimodal natif Gemini (image + texte) : aucun OCR separe necessaire,
+    # le modele lit directement le texte visible dans l'image.
+    contents = [
+        genai_types.Part.from_bytes(data=image_bytes, mime_type=image.content_type),
+        prompt_text,
+    ]
+    reply = ask_gemini(client, contents, system_instruction=ASSISTANT_SYSTEM_PROMPT, cache=_GEMINI_CACHE)
+    return AssistantChatResponse(reply=reply)
+
+
 @app.get(
     "/game/categories", response_model=list[GameCategoryOut], tags=["Grand Public"],
     summary="Categories du jeu de vigilance",
@@ -437,6 +469,11 @@ def temoignage(payload: TemoignageRequest):
         f.write(json.dumps({
             "horodatage": time.strftime("%Y-%m-%d %H:%M:%S"),
             "fiche": fiche,
+            # Champs structures (en plus de la fiche texte) : uniquement utilises pour les
+            # comptages agreges du fil de tendances (/temoignages/tendances) - jamais le
+            # texte libre individuel, pour preserver l'anonymat.
+            "canal": payload.canal,
+            "demande": payload.demande,
         }, ensure_ascii=False) + "\n")
 
     return TemoignageResponse(fiche=fiche, total_contributions=_count_temoignages())
@@ -448,6 +485,38 @@ def temoignage(payload: TemoignageRequest):
 )
 def temoignages_count():
     return TemoignagesCountResponse(count=_count_temoignages())
+
+
+@app.get(
+    "/temoignages/tendances", response_model=TendancesResponse, tags=["Grand Public"],
+    summary="Tendances agregees des techniques de fraude signalees (comptages uniquement, jamais de texte individuel)",
+)
+def temoignages_tendances():
+    """Fil communautaire de tendances : comptages par canal et par type de demande,
+    calcules sur l'ensemble des contributions. Ne retourne JAMAIS le texte libre
+    (`fiche`/`detail`) d'une contribution individuelle - uniquement des totaux par
+    categorie, pour proteger l'anonymat tout en donnant un signal collectif utile
+    ("X signalements de faux-employeur cette semaine")."""
+    if not TEMOIGNAGES_FILE.exists():
+        return TendancesResponse(total=0, par_canal={}, par_demande={})
+    canal_counts, demande_counts, total = {}, {}, 0
+    with open(TEMOIGNAGES_FILE) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entry = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            total += 1
+            canal = entry.get("canal")
+            demande = entry.get("demande")
+            if canal:
+                canal_counts[canal] = canal_counts.get(canal, 0) + 1
+            if demande:
+                demande_counts[demande] = demande_counts.get(demande, 0) + 1
+    return TendancesResponse(total=total, par_canal=canal_counts, par_demande=demande_counts)
 
 
 # ==================================================================

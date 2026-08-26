@@ -157,6 +157,12 @@ class TemoignagesCountResponse(BaseModel):
     count: int
 
 
+class TendancesResponse(BaseModel):
+    total: int = Field(..., description="Nombre total de contributions prises en compte")
+    par_canal: dict = Field(..., description="Comptage par canal utilise (SMS, appel, WhatsApp...)")
+    par_demande: dict = Field(..., description="Comptage par type de demande signalee")
+
+
 # ---------------------------------------------------------------- Sensibilisation ludique (fusion gamification)
 class GameScenarioOut(BaseModel):
     situation: str

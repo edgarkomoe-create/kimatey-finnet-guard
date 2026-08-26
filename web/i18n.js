@@ -76,6 +76,9 @@ const I18N = {
     chat_send: "Envoyer",
     mic_btn: "🎤",
     mic_unsupported: "La reconnaissance vocale n'est pas prise en charge par ce navigateur. Essayez Chrome ou Edge, ou écrivez votre question.",
+    image_btn: "📷",
+    image_too_large: "Image trop volumineuse (8 Mo maximum).",
+    image_sent_label: "📷 [Capture d'écran envoyée]",
     chat_voice_hint: "🔊 Les réponses de l'assistant sont lues à voix haute automatiquement (synthèse vocale du navigateur).",
     chat_welcome: "👋 Bonjour ! Posez-moi une question sur une alerte ou un message suspect que vous avez reçu.",
     chat_unavailable: "L'assistant n'est pas disponible pour le moment.",
@@ -153,6 +156,14 @@ const I18N = {
     account_server_error: "Impossible de contacter le serveur.",
     account_connected_as: "🔐 Connecté en tant que",
     account_logout: "Se déconnecter",
+
+    // ---- Fil de tendances communautaire ----
+    trends_empty: "Aucune tendance disponible pour l'instant — soyez parmi les premiers à contribuer ci-dessous !",
+    trends_title: "Tendances des techniques d'arnaque signalées",
+    trends_based_on: "basé sur",
+    trends_contributions: "contributions",
+    trends_by_canal: "Par canal utilisé :",
+    trends_by_demande: "Par type de demande :",
   },
 
   en: {
@@ -220,6 +231,9 @@ const I18N = {
     chat_send: "Send",
     mic_btn: "🎤",
     mic_unsupported: "Voice recognition is not supported by this browser. Try Chrome or Edge, or type your question.",
+    image_btn: "📷",
+    image_too_large: "Image too large (8 MB maximum).",
+    image_sent_label: "📷 [Screenshot sent]",
     chat_voice_hint: "🔊 The assistant's replies are read aloud automatically (browser text-to-speech).",
     chat_welcome: "👋 Hi! Ask me about an alert or a suspicious message you received.",
     chat_unavailable: "The assistant is not available right now.",
@@ -294,6 +308,14 @@ const I18N = {
     account_server_error: "Could not reach the server.",
     account_connected_as: "🔐 Connected as",
     account_logout: "Log out",
+
+    // ---- Community trends feed ----
+    trends_empty: "No trends available yet — be among the first to contribute below!",
+    trends_title: "Trending fraud techniques reported",
+    trends_based_on: "based on",
+    trends_contributions: "contributions",
+    trends_by_canal: "By channel used:",
+    trends_by_demande: "By type of request:",
   },
 };
 

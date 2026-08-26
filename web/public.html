@@ -47,6 +47,8 @@
     <div class="chat-box" id="chat-box"></div>
     <div class="chat-input-row">
       <input type="text" id="chat-input" data-i18n-placeholder="chat_placeholder" placeholder="Écrivez votre question ici..." />
+      <input type="file" id="chat-image-input" accept="image/png,image/jpeg,image/webp" style="display:none">
+      <button class="btn secondary" id="chat-image-btn" title="Envoyer une capture d'écran de SMS" data-i18n="image_btn">📷</button>
       <button class="btn secondary" id="chat-mic" title="Poser la question à l'oral" data-i18n="mic_btn">🎤</button>
       <button class="btn" id="chat-send" data-i18n="chat_send">Envoyer</button>
     </div>
@@ -72,6 +74,7 @@
     </p>
     <p class="hint" style="font-style:italic" data-i18n="game_lang_note">🌍 Les scénarios du quiz et les échanges avec Lieutenant Cyber restent en français pour le moment, quelle que soit la langue choisie ici.</p>
     <div id="account-container"></div>
+    <div id="trends-container"></div>
     <div id="game-header-container"></div>
     <div id="category-tabs-container"></div>
     <div id="mascot-container"></div>
@@ -204,6 +207,49 @@ async function sendChatMessage() {
 document.getElementById("chat-send").addEventListener("click", sendChatMessage);
 document.getElementById("chat-input").addEventListener("keydown", (e) => {
   if (e.key === "Enter") sendChatMessage();
+});
+
+// ---- Analyse d'une capture d'ecran (SMS/message suspect) ----
+// Envoie l'image directement a Gemini (via l'API), qui lit le texte visible
+// nativement - aucune etape d'OCR separee necessaire cote client.
+document.getElementById("chat-image-btn").addEventListener("click", () => {
+  document.getElementById("chat-image-input").click();
+});
+
+document.getElementById("chat-image-input").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = ""; // permet de reselectionner le meme fichier ensuite
+
+  if (file.size > 8 * 1024 * 1024) {
+    chatMessages.push({ role: "error", content: t("image_too_large") });
+    renderChat();
+    return;
+  }
+
+  chatMessages.push({ role: "user", content: t("image_sent_label") });
+  renderChat();
+
+  const formData = new FormData();
+  formData.append("image", file);
+  const question = document.getElementById("chat-input").value.trim();
+  if (question) formData.append("message", question);
+  document.getElementById("chat-input").value = "";
+
+  try {
+    const r = await fetch(API_BASE_URL + "/assistant/chat_image", { method: "POST", body: formData });
+    if (!r.ok) {
+      const body = await r.json().catch(() => ({}));
+      chatMessages.push({ role: "error", content: body.detail || t("chat_unavailable") });
+    } else {
+      const body = await r.json();
+      chatMessages.push({ role: "assistant", content: body.reply });
+      speak(body.reply);
+    }
+  } catch (err) {
+    chatMessages.push({ role: "error", content: t("chat_server_error") + API_BASE_URL + ")." });
+  }
+  renderChat();
 });
 
 // ---- Reconnaissance vocale en entree (Web Speech API - native navigateur, gratuite) ----
@@ -618,6 +664,7 @@ async function submitTemoignage(detail) {
   reportDone = true;
   renderReport();
   renderCertificateCTA();
+  loadTrends();
   launchBalloons();
 }
 
@@ -807,7 +854,41 @@ async function pushProgressToServer() {
   } catch (e) { /* echec silencieux : la progression reste sauvegardee localement */ }
 }
 
+// ==========================================================================
+// Fil communautaire de tendances : comptages agreges par canal/type de
+// demande, jamais de texte individuel (voir /temoignages/tendances).
+// ==========================================================================
+async function loadTrends() {
+  const el = document.getElementById("trends-container");
+  if (!el) return;
+  try {
+    const r = await fetch(API_BASE_URL + "/temoignages/tendances");
+    const data = await r.json();
+    if (!data.total) {
+      el.innerHTML = '<p class="hint" style="margin-bottom:1rem">' + t("trends_empty") + '</p>';
+      return;
+    }
+    const topCanal = Object.entries(data.par_canal).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const topDemande = Object.entries(data.par_demande).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    let html = '<div class="scenario-box" style="margin-bottom:1rem">';
+    html += '<b>📊 ' + t("trends_title") + '</b> <span class="hint">(' + t("trends_based_on") + ' ' + data.total + ' ' + t("trends_contributions") + ')</span><br><br>';
+    if (topCanal.length) {
+      html += '<b>' + t("trends_by_canal") + '</b><br>';
+      topCanal.forEach(([canal, count]) => { html += '• ' + canal + ' — ' + count + '<br>'; });
+    }
+    if (topDemande.length) {
+      html += '<br><b>' + t("trends_by_demande") + '</b><br>';
+      topDemande.forEach(([demande, count]) => { html += '• ' + demande + ' — ' + count + '<br>'; });
+    }
+    html += '</div>';
+    el.innerHTML = html;
+  } catch (e) {
+    el.innerHTML = ""; // echec silencieux : le reste de la page reste utilisable
+  }
+}
+
 renderAccount();
+loadTrends();
 
 loadGame();
 loadReportSteps();
