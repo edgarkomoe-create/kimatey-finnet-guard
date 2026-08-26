@@ -695,10 +695,74 @@ def render_organisation_view():
 
 
 def render_reseau_module():
-    tab_dashboard, tab_import, tab_predict, tab_live, tab_alerts = st.tabs(
-        ["📊 Tableau de bord", "📁 Analyser un fichier de logs", "🔎 Verifier un flux unique",
+    tab_simple, tab_dashboard, tab_import, tab_predict, tab_live, tab_alerts = st.tabs(
+        ["👔 Resume simple", "📊 Tableau de bord", "📁 Analyser un fichier de logs", "🔎 Verifier un flux unique",
          "🔴 Surveillance en direct", "🚨 Alertes detectees"]
     )
+
+    # ---------------------------------------------------------------- Tab 0 : Resume simple (non-technique)
+    # Destine a un decideur/manager, pas a une equipe technique : jamais de metrique de
+    # modele (accuracy/F1/AUC/matrice de confusion), jamais de jargon ML. Uniquement le
+    # sens pour l'activite - statut visuel, phrase claire, action recommandee. S'appuie
+    # sur les memes donnees deja calculees (etat operationnel, journal d'alertes) que le
+    # dashboard professionnel - aucune duplication de calcul, seulement une autre lecture.
+    with tab_simple:
+        org_state_simple = load_org_state()
+        alert_log_simple = org_state_simple.get("alert_log", [])
+        score_simple = compute_security_score(alert_log_simple)
+        n_open_simple = len([a for a in alert_log_simple if a.get("Statut", "Ouvert") == "Ouvert"])
+
+        PLAIN_LANGUAGE = {
+            "Scan de Ports / Reconnaissance": "une exploration suspecte de votre reseau",
+            "Attaque DDoS / Volumetrique": "une tentative de surcharge de votre systeme",
+            "Infiltration / Brute-Force / Exfiltration": "une tentative d'intrusion grave",
+        }
+
+        if score_simple >= 70:
+            banner_color, banner_bg = GREEN, "rgba(34,197,94,0.12)"
+            banner_text = "🟢 Votre reseau est actuellement bien protege"
+        elif score_simple >= 40:
+            banner_color, banner_bg = "#f5a524", "rgba(245,165,36,0.12)"
+            banner_text = "🟠 Une vigilance accrue est recommandee"
+        else:
+            banner_color, banner_bg = RED, "rgba(231,76,60,0.12)"
+            banner_text = "🔴 Une attention immediate est necessaire"
+
+        st.markdown(
+            f'<div style="background:{banner_bg};border-left:5px solid {banner_color};'
+            f'border-radius:10px;padding:1.4rem 1.6rem;margin-bottom:1.2rem;">'
+            f'<div style="font-size:1.3rem;font-weight:700;color:{banner_color};">{banner_text}</div>'
+            f'</div>', unsafe_allow_html=True,
+        )
+
+        if not alert_log_simple:
+            st.write("Aucune alerte enregistree pour le moment. Le systeme surveille en continu.")
+        else:
+            open_alerts_simple = [a for a in alert_log_simple if a.get("Statut", "Ouvert") == "Ouvert"]
+            if open_alerts_simple:
+                categories_presentes = {a["Menace"] for a in open_alerts_simple}
+                phrases = [PLAIN_LANGUAGE.get(c, "une activite inhabituelle") for c in categories_presentes]
+                st.write(
+                    f"**{len(open_alerts_simple)} situation(s)** demande(nt) encore votre attention : "
+                    + ", ".join(phrases) + "."
+                )
+            else:
+                st.write("Toutes les alertes recentes ont ete traitees. Rien ne demande votre attention pour l'instant.")
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("**Ce qu'il faut retenir**")
+            if n_open_simple > 0:
+                st.write(f"- {n_open_simple} situation(s) suspecte(s) sont encore ouvertes et non traitees.")
+                st.write("- Il est recommande de transmettre ces cas a votre equipe technique pour verification.")
+            else:
+                st.write("- Aucune situation ouverte ne necessite d'action de votre part actuellement.")
+            st.write(f"- Au total, {len(alert_log_simple)} evenement(s) ont ete detectes et suivis depuis le debut de la surveillance.")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.caption(
+            "Cette vue simplifiee ne montre aucun detail technique. Votre equipe securite peut consulter "
+            "le tableau de bord complet et le journal d'alertes pour l'analyse detaillee."
+        )
 
     # ---------------------------------------------------------------- Tab 1 : Dashboard
     with tab_dashboard:
