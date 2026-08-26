@@ -37,6 +37,7 @@ if str(BASE_DIR) not in sys.path:
 from core.kimatey_core import (
     GENAI_AVAILABLE, genai, genai_types, ask_gemini,
     ASSISTANT_SYSTEM_PROMPT, ANONYMIZE_SYSTEM_PROMPT, ORG_ANALYST_SYSTEM_PROMPT, ORG_EXECUTIVE_SYSTEM_PROMPT,
+    ACADEMIC_INSTRUCTOR_SYSTEM_PROMPT,
     SCENARIOS, REPORT_STEPS,
     GAME_CATEGORIES, GAME_MASCOTS, BADGES, XP_PER_CORRECT, XP_PER_INCORRECT, MAX_HEARTS,
     compute_level, compute_unlocked_badges,
@@ -798,6 +799,27 @@ def render_reseau_module():
                               sub="Variables retenues apres selection (RFE)"), unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
+        st.info(
+            "🎓 **Mode academique.** Ce tableau de bord sert aussi de cas d'etude pedagogique "
+            "(machine learning applique a la cybersecurite reseau). Depliez les explications "
+            "ci-dessous, ou posez une question directement au Professeur Cyber plus bas."
+        )
+        with st.expander("📖 Que signifient ces 4 indicateurs ? (cliquez pour deplier)"):
+            st.markdown(
+                "- **Exactitude (accuracy)** : proportion de predictions correctes sur l'ensemble de test. "
+                "Attention : sur des classes desequilibrees (ici ~75% de trafic normal), une accuracy elevee "
+                "peut masquer un modele qui predit toujours 'Normal' - c'est pourquoi on regarde aussi le F1.\n"
+                "- **F1-score macro** : moyenne du F1-score (equilibre precision/rappel) calculee "
+                "**separement pour chaque classe puis moyennee** - contrairement a une moyenne ponderee, "
+                "chaque classe compte autant, meme la plus rare. C'est le bon choix ici puisque detecter "
+                "les 25% de trafic malveillant compte autant que bien classer le trafic normal.\n"
+                "- **AUC macro (Area Under Curve)** : mesure la capacite du modele a separer une classe "
+                "des autres, quel que soit le seuil de decision choisi. Proche de 100% = tres bonne "
+                "separation ; 50% = equivalent a un tirage au sort.\n"
+                "- **Variables retenues (RFE)** : Recursive Feature Elimination a permis de reduire de 9 "
+                "a 5 variables sans perte de performance - un exemple concret de selection de variables "
+                "en reduisant la complexite du modele (plus facile a auditer, moins de risque de sur-apprentissage)."
+            )
         c1, c2 = st.columns(2)
         with c1:
             st.markdown("**Comparaison de 5 techniques testees**")
@@ -815,6 +837,18 @@ def render_reseau_module():
                 fig.tight_layout()
                 st.pyplot(fig)
                 plt.close(fig)
+                with st.expander("📖 Pourquoi comparer 5 algorithmes plutot que d'en choisir un directement ?"):
+                    st.markdown(
+                        "Chaque famille d'algorithme a des forces differentes : la Regression Logistique est "
+                        "rapide et interpretable mais suppose des frontieres lineaires ; KNN capture des motifs "
+                        "locaux mais est sensible au bruit ; Naive Bayes suppose l'independance des variables "
+                        "(rarement vrai en pratique, mais souvent efficace quand meme) ; SVM gere bien les "
+                        "frontieres complexes mais est plus lent a entrainer ; l'Arbre de Decision est "
+                        "interpretable (on peut tracer chaque decision) et gere naturellement les interactions "
+                        "entre variables. **Comparer plutot que supposer** est une regle de methodologie "
+                        "scientifique de base : ici, tous obtiennent des scores tres proches (>98,9%), "
+                        "l'Arbre de Decision a ete retenu pour son interpretabilite, pas juste sa performance brute."
+                    )
         with c2:
             st.markdown("**Le systeme sait-il bien reconnaitre chaque type de menace ?**")
             st.markdown('<p class="chart-hint">Plus une courbe se rapproche du coin superieur gauche, mieux le systeme '
@@ -835,6 +869,127 @@ def render_reseau_module():
                      'aussi fiable, tout en etant plus simple a auditer pour un analyste.</p>', unsafe_allow_html=True)
         if (OUT_DIR / "comparison_step3.csv").exists():
             st.dataframe(pd.read_csv(OUT_DIR / "comparison_step3.csv"), use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+        st.subheader("🎓 Professeur Cyber - assistant pedagogique")
+        st.caption(
+            "Pour un enseignant preparant un cours, ou un etudiant qui revise : posez une question sur "
+            "le machine learning, les statistiques ou la methodologie de ce projet, ou testez vos "
+            "connaissances avec un mini-quiz."
+        )
+        mode_academique = st.radio(
+            "Mode", ["💬 Poser une question", "📝 Mini-quiz", "🧪 Importer un jeu de donnees (cas d'etude)"],
+            horizontal=True, key="academic_mode",
+        )
+
+        if mode_academique == "💬 Poser une question":
+            if GENAI_AVAILABLE and get_gemini_key():
+                question_academique = st.text_input(
+                    "Votre question", placeholder="Ex : Pourquoi utiliser le F1-score macro plutot que l'accuracy ?",
+                    key="academic_question_input",
+                )
+                if st.button("Demander au Professeur Cyber", key="ask_professeur"):
+                    if question_academique.strip():
+                        client = genai.Client(api_key=get_gemini_key())
+                        with st.spinner("Le Professeur Cyber reflechit..."):
+                            reponse = ask_gemini(client, question_academique, system_instruction=ACADEMIC_INSTRUCTOR_SYSTEM_PROMPT, cache=st.session_state)
+                        st.session_state.setdefault("academic_qa_history", []).append((question_academique, reponse))
+                for q, r in reversed(st.session_state.get("academic_qa_history", [])[-5:]):
+                    with st.chat_message("user"):
+                        st.write(q)
+                    with st.chat_message("assistant"):
+                        st.write(f"**🎓 Professeur Cyber** : {r}")
+            else:
+                st.info("Le mode Q&A necessite une cle Gemini configuree (GEMINI_API_KEY).")
+
+        elif mode_academique == "📝 Mini-quiz":
+            QUIZ_ML = [
+                {"q": "Pourquoi standardiser (scaler) les donnees uniquement sur le jeu d'entrainement ?",
+                 "options": ["Pour aller plus vite", "Pour eviter une fuite de donnees (data leakage)", "Ce n'est pas necessaire", "Pour reduire le nombre de variables"],
+                 "correct": 1,
+                 "explication": "Si on calcule la moyenne/ecart-type sur train+test, des informations du test 'fuient' dans l'entrainement, faussant l'evaluation."},
+                {"q": "Sur un jeu de donnees a 75% de classe normale, pourquoi l'accuracy seule peut etre trompeuse ?",
+                 "options": ["Elle est toujours fausse", "Un modele qui predit toujours 'Normal' aurait deja 75% d'accuracy", "L'accuracy ne se calcule pas sur plusieurs classes", "Elle est plus lente a calculer"],
+                 "correct": 1,
+                 "explication": "Avec un fort desequilibre, un modele naïf (toujours la classe majoritaire) obtient une accuracy elevee sans rien detecter - d'ou l'interet du F1-score."},
+                {"q": "Que mesure le F1-score macro par rapport au F1-score pondere (weighted) ?",
+                 "options": ["La meme chose", "Chaque classe compte autant, meme la plus rare", "Seulement la classe majoritaire", "La vitesse du modele"],
+                 "correct": 1,
+                 "explication": "Le macro-average moyenne les F1 par classe sans ponderer par leur frequence - important quand detecter la classe rare (menace) compte autant que la classe frequente."},
+                {"q": "A quoi sert le GridSearchCV utilise dans ce projet ?",
+                 "options": ["A collecter plus de donnees", "A tester automatiquement plusieurs combinaisons d'hyperparametres avec validation croisee", "A visualiser les resultats", "A supprimer les valeurs manquantes"],
+                 "correct": 1,
+                 "explication": "GridSearchCV essaie systematiquement des combinaisons d'hyperparametres (ex: profondeur de l'arbre) et retient la meilleure selon une validation croisee, evitant un choix arbitraire."},
+                {"q": "Pourquoi le modele final a-t-il ete reduit de 9 a 5 variables (RFE) ?",
+                 "options": ["Pour ameliorer legerement la performance", "Pour simplifier le modele sans perdre en performance, le rendant plus interpretable", "Parce que 4 variables etaient corrompues", "Ce n'etait pas volontaire"],
+                 "correct": 1,
+                 "explication": "La selection de variables (RFE) a identifie les 5 variables les plus informatives - un modele plus simple, aussi performant, est plus facile a auditer et moins sujet au sur-apprentissage."},
+            ]
+            if "quiz_ml_score" not in st.session_state:
+                st.session_state.quiz_ml_score = 0
+                st.session_state.quiz_ml_index = 0
+                st.session_state.quiz_ml_answered = False
+
+            idx_quiz = st.session_state.quiz_ml_index
+            if idx_quiz < len(QUIZ_ML):
+                question = QUIZ_ML[idx_quiz]
+                st.write(f"**Question {idx_quiz + 1}/{len(QUIZ_ML)}** - Score actuel : {st.session_state.quiz_ml_score}/{len(QUIZ_ML)}")
+                st.write(question["q"])
+                choix = st.radio("Votre reponse", question["options"], key=f"quiz_choice_{idx_quiz}", index=None)
+                if not st.session_state.quiz_ml_answered:
+                    if st.button("Valider", key=f"quiz_validate_{idx_quiz}"):
+                        if choix is None:
+                            st.warning("Choisissez une reponse avant de valider.")
+                        else:
+                            st.session_state.quiz_ml_answered = True
+                            if question["options"].index(choix) == question["correct"]:
+                                st.session_state.quiz_ml_score += 1
+                            st.rerun()
+                else:
+                    correct_option = question["options"][question["correct"]]
+                    if choix == correct_option:
+                        st.success(f"✅ Correct ! {question['explication']}")
+                    else:
+                        st.error(f"❌ Pas tout a fait. La bonne reponse etait : *{correct_option}*. {question['explication']}")
+                    if st.button("Question suivante", key=f"quiz_next_{idx_quiz}"):
+                        st.session_state.quiz_ml_index += 1
+                        st.session_state.quiz_ml_answered = False
+                        st.rerun()
+            else:
+                st.success(f"🎉 Quiz termine ! Score final : {st.session_state.quiz_ml_score}/{len(QUIZ_ML)}")
+                if st.button("Recommencer le quiz"):
+                    st.session_state.quiz_ml_score = 0
+                    st.session_state.quiz_ml_index = 0
+                    st.session_state.quiz_ml_answered = False
+                    st.rerun()
+
+        else:  # Importer un jeu de donnees (cas d'etude)
+            st.caption(
+                "Outil generique d'exploration statistique (EDA), decouple du modele de fraude Kimatey : "
+                "importez n'importe quel fichier CSV (donnees de cours, jeu de donnees public...) pour "
+                "illustrer des concepts de statistique descriptive en cours ou en devoir."
+            )
+            uploaded_case_study = st.file_uploader("Fichier CSV du cas d'etude", type=["csv"], key="academic_case_study")
+            if uploaded_case_study is not None:
+                df_case = pd.read_csv(uploaded_case_study)
+                st.write(f"**{len(df_case)} lignes, {len(df_case.columns)} colonnes.**")
+                st.dataframe(df_case.head(10), use_container_width=True)
+                numeric_cols = df_case.select_dtypes(include=[np.number]).columns.tolist()
+                if numeric_cols:
+                    col_choisie = st.selectbox("Colonne numerique a explorer", numeric_cols, key="case_study_col")
+                    c1, c2 = st.columns(2)
+                    c1.markdown(kpi_card("📊", "Moyenne", f"{df_case[col_choisie].mean():.2f}", level="neutral"), unsafe_allow_html=True)
+                    c2.markdown(kpi_card("📐", "Ecart-type", f"{df_case[col_choisie].std():.2f}", level="neutral"), unsafe_allow_html=True)
+                    fig, ax = plt.subplots(figsize=(8, 3.5))
+                    ax.hist(df_case[col_choisie].dropna(), bins=30, color=TEAL)
+                    ax.set_xlabel(col_choisie)
+                    ax.set_ylabel("Frequence")
+                    style_dark_fig(fig, ax)
+                    fig.tight_layout()
+                    st.pyplot(fig)
+                    plt.close(fig)
+                else:
+                    st.info("Aucune colonne numerique detectee dans ce fichier.")
 
         st.markdown("---")
         st.subheader("🎛️ Personnalisation du modele (modele hybride)")
