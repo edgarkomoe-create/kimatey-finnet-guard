@@ -14,6 +14,7 @@ import json
 import os
 import sys
 import time
+import uuid
 from pathlib import Path
 from datetime import datetime
 
@@ -115,8 +116,6 @@ if "view" not in st.session_state:
     # sur la page d'accueil Streamlit, puis clic vers l'espace deja choisi cote web).
     _query_view = st.query_params.get("view")
     st.session_state.view = _query_view if _query_view in ("organisation", "public") else "landing"
-if "alert_log" not in st.session_state:
-    st.session_state.alert_log = []
 if "live_dist" not in st.session_state:
     st.session_state.live_dist = {}
 if "live_rows" not in st.session_state:
@@ -285,13 +284,87 @@ def predict_with_confidence(df_raw):
 
 def log_alert(source_label, pred_class, confidence, details=""):
     if pred_class != 0:
-        st.session_state.alert_log.insert(0, {
+        state = load_org_state()
+        state["alert_log"].insert(0, {
+            "ID": str(uuid.uuid4())[:8],
             "Horodatage": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "Source": source_label,
             "Menace": CLASS_NAMES[pred_class],
             "Confiance (%)": round(confidence, 1),
             "Details": details,
+            "Statut": "Ouvert",
+            "Fermee_le": None,
         })
+        save_org_state(state)
+
+
+# ------------------------------------------------------------------------
+# Persistance disque de l'etat operationnel (journal d'alertes + historique
+# de score). Remplace le st.session_state precedent, ephemere par session :
+# stocke sur le disque du serveur Streamlit, donc partage entre sessions et
+# survit a une fermeture de page (limite connue : sur Streamlit Community
+# Cloud gratuit, le disque peut etre reinitialise lors d'un redeploiement -
+# suffisant pour cette demo, mais une vraie base de donnees serait requise
+# pour une mise en production).
+# ------------------------------------------------------------------------
+ORG_STATE_FILE = Path(__file__).resolve().parent / "organisation_state.json"
+
+SEVERITY_WEIGHT = {1: 1, 2: 2, 3: 3}  # 1=scan (faible), 2=DDoS (eleve), 3=infiltration (critique)
+
+
+def load_org_state():
+    if ORG_STATE_FILE.exists():
+        with open(ORG_STATE_FILE) as f:
+            return json.load(f)
+    return {"alert_log": [], "score_history": []}
+
+
+def save_org_state(state):
+    with open(ORG_STATE_FILE, "w") as f:
+        json.dump(state, f, indent=2, ensure_ascii=False)
+
+
+def compute_security_score(alert_log):
+    """Score composite /100 : penalise le trafic recent selon sa gravite ponderee.
+    100 = aucune menace ouverte recemment ; descend selon le volume et la gravite
+    des alertes encore ouvertes (une alerte fermee ne penalise plus le score)."""
+    open_alerts = [a for a in alert_log if a.get("Statut", "Ouvert") == "Ouvert"]
+    if not open_alerts:
+        return 100
+    weight_map = {"Scan de Ports / Reconnaissance": 1, "Attaque DDoS / Volumetrique": 2,
+                  "Infiltration / Brute-Force / Exfiltration": 3}
+    total_weight = sum(weight_map.get(a["Menace"], 1) for a in open_alerts)
+    avg_severity = total_weight / len(open_alerts)  # 1 a 3
+    volume_penalty = min(40, len(open_alerts) * 0.5)  # plus d'alertes ouvertes = score plus bas, plafonne
+    severity_penalty = (avg_severity / 3) * 60  # jusqu'a 60 points selon la gravite moyenne
+    score = max(0, round(100 - volume_penalty - severity_penalty))
+    return score
+
+
+def record_score_snapshot(score):
+    state = load_org_state()
+    state.setdefault("score_history", []).append(
+        {"Horodatage": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Score": score}
+    )
+    state["score_history"] = state["score_history"][-50:]  # garde les 50 derniers points
+    save_org_state(state)
+    return state
+
+
+def mttr_hours(alert_log):
+    """Temps moyen de resolution, en heures, calcule sur les alertes fermees."""
+    durations = []
+    for a in alert_log:
+        if a.get("Statut") == "Ferme" and a.get("Fermee_le"):
+            try:
+                t0 = datetime.strptime(a["Horodatage"], "%Y-%m-%d %H:%M:%S")
+                t1 = datetime.strptime(a["Fermee_le"], "%Y-%m-%d %H:%M:%S")
+                durations.append((t1 - t0).total_seconds() / 3600)
+            except (ValueError, KeyError):
+                continue
+    if not durations:
+        return None
+    return sum(durations) / len(durations)
 
 
 @st.cache_data(show_spinner=False)
@@ -821,18 +894,97 @@ def render_organisation_view():
 
     # ---------------------------------------------------------------- Tab 5 : Journal d'alertes
     with tab_alerts:
-        st.subheader("Alertes detectees automatiquement")
-        st.write("Chaque connexion jugee suspecte par le systeme apparait ici, la plus recente en premier.")
-        if len(st.session_state.alert_log) == 0:
+        org_state = load_org_state()
+        alert_log = org_state.get("alert_log", [])
+        score = compute_security_score(alert_log)
+        record_score_snapshot(score)
+        org_state = load_org_state()  # relit apres l'ajout du nouveau point d'historique
+
+        st.subheader("Etat operationnel")
+        n_open = len([a for a in alert_log if a.get("Statut", "Ouvert") == "Ouvert"])
+        n_closed = len(alert_log) - n_open
+        treated_rate = round(100 * n_closed / len(alert_log)) if alert_log else 0
+        mttr = mttr_hours(alert_log)
+        score_level = "good" if score >= 70 else ("warn" if score >= 40 else "threat")
+
+        k1, k2, k3, k4 = st.columns(4)
+        k1.markdown(kpi_card("🛡️", "Score de securite", f"{score}/100", level=score_level,
+                              sub="Penalise selon volume et gravite des alertes encore ouvertes"), unsafe_allow_html=True)
+        k2.markdown(kpi_card("🚨", "Alertes ouvertes", str(n_open), level=("threat" if n_open > 0 else "good"),
+                              sub=f"{n_closed} deja traitees"), unsafe_allow_html=True)
+        k3.markdown(kpi_card("✅", "Taux de traitement", f"{treated_rate}%", level="neutral",
+                              sub="Part des alertes marquees comme fermees"), unsafe_allow_html=True)
+        k4.markdown(kpi_card("⏱️", "Temps moyen de resolution", f"{mttr:.1f} h" if mttr is not None else "N/A",
+                              level="neutral", sub="Calcule sur les alertes deja fermees"), unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("**Alertes ouvertes par gravite**")
+            open_alerts = [a for a in alert_log if a.get("Statut", "Ouvert") == "Ouvert"]
+            if open_alerts:
+                sev_counts = pd.Series([a["Menace"] for a in open_alerts]).value_counts()
+                fig, ax = plt.subplots(figsize=(6, 3.5))
+                colors_map = {"Scan de Ports / Reconnaissance": CLASS_COLORS[1],
+                              "Attaque DDoS / Volumetrique": CLASS_COLORS[2],
+                              "Infiltration / Brute-Force / Exfiltration": CLASS_COLORS[3]}
+                ax.bar(sev_counts.index, sev_counts.values,
+                       color=[colors_map.get(i, TEAL) for i in sev_counts.index])
+                ax.set_ylabel("Nombre d'alertes ouvertes")
+                plt.xticks(rotation=20, ha="right", fontsize=8)
+                style_dark_fig(fig, ax)
+                fig.tight_layout()
+                st.pyplot(fig)
+                plt.close(fig)
+            else:
+                st.info("Aucune alerte ouverte actuellement.")
+        with c2:
+            st.markdown("**Evolution du score de securite**")
+            score_hist = org_state.get("score_history", [])
+            if len(score_hist) >= 2:
+                fig, ax = plt.subplots(figsize=(6, 3.5))
+                ax.plot(range(len(score_hist)), [p["Score"] for p in score_hist], color=TEAL, marker="o", markersize=3)
+                ax.set_ylim(0, 100)
+                ax.set_ylabel("Score /100")
+                ax.set_xlabel("Chargements successifs de cet onglet")
+                style_dark_fig(fig, ax)
+                fig.tight_layout()
+                st.pyplot(fig)
+                plt.close(fig)
+            else:
+                st.info("L'historique du score se construit au fil des visites de cet onglet.")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.subheader("Journal des alertes")
+        st.write("Chaque connexion jugee suspecte par le systeme apparait ici, la plus recente en premier. "
+                 "Marquez une alerte comme traitee une fois l'investigation terminee.")
+        if len(alert_log) == 0:
             st.info("Aucune alerte enregistree pour l'instant. Analysez des flux dans les onglets precedents.")
         else:
-            df_alerts = pd.DataFrame(st.session_state.alert_log)
-            st.dataframe(df_alerts, use_container_width=True, hide_index=True)
+            for alert in alert_log[:100]:
+                is_open = alert.get("Statut", "Ouvert") == "Ouvert"
+                icon = "🔴" if is_open else "🟢"
+                cols = st.columns([1, 2, 2, 2, 1, 2])
+                cols[0].markdown(f"{icon} **{alert.get('Statut', 'Ouvert')}**")
+                cols[1].write(alert["Horodatage"])
+                cols[2].write(alert["Source"])
+                cols[3].write(alert["Menace"])
+                cols[4].write(f"{alert['Confiance (%)']}%")
+                btn_label = "Marquer traitee" if is_open else "Rouvrir"
+                if cols[5].button(btn_label, key=f"toggle_{alert['ID']}"):
+                    for a in org_state["alert_log"]:
+                        if a["ID"] == alert["ID"]:
+                            a["Statut"] = "Ferme" if is_open else "Ouvert"
+                            a["Fermee_le"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S") if is_open else None
+                    save_org_state(org_state)
+                    st.rerun()
+
+            df_alerts = pd.DataFrame(alert_log)
             csv_alerts = df_alerts.to_csv(index=False).encode("utf-8")
             c1, c2 = st.columns(2)
             c1.download_button("Telecharger le journal (CSV)", csv_alerts, "journal_alertes.csv", "text/csv")
             if c2.button("Vider le journal"):
-                st.session_state.alert_log = []
+                save_org_state({"alert_log": [], "score_history": org_state.get("score_history", [])})
                 st.rerun()
 
 
