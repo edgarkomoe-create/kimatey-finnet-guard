@@ -36,7 +36,8 @@ if str(BASE_DIR) not in sys.path:
 
 from core.kimatey_core import (
     GENAI_AVAILABLE, genai, genai_types, ask_gemini,
-    ASSISTANT_SYSTEM_PROMPT, ANONYMIZE_SYSTEM_PROMPT, ORG_ANALYST_SYSTEM_PROMPT, SCENARIOS, REPORT_STEPS,
+    ASSISTANT_SYSTEM_PROMPT, ANONYMIZE_SYSTEM_PROMPT, ORG_ANALYST_SYSTEM_PROMPT, ORG_EXECUTIVE_SYSTEM_PROMPT,
+    SCENARIOS, REPORT_STEPS,
     GAME_CATEGORIES, GAME_MASCOTS, BADGES, XP_PER_CORRECT, XP_PER_INCORRECT, MAX_HEARTS,
     compute_level, compute_unlocked_badges,
 )
@@ -763,6 +764,25 @@ def render_reseau_module():
             "Cette vue simplifiee ne montre aucun detail technique. Votre equipe securite peut consulter "
             "le tableau de bord complet et le journal d'alertes pour l'analyse detaillee."
         )
+
+        # ---- Avis IA optionnel : le resume ci-dessus est instantane (regles fixes,
+        # toujours disponible). Ce bouton offre en plus un avis genere par Lieutenant
+        # Cyber, plus nuance, pour qui veut une lecture complementaire. ----
+        if GENAI_AVAILABLE and get_gemini_key():
+            if st.button("🎖️ Demander un avis detaille a Lieutenant Cyber", key="lc_executive_summary"):
+                client = genai.Client(api_key=get_gemini_key())
+                categories_ouvertes = list({a["Menace"] for a in [x for x in alert_log_simple if x.get("Statut", "Ouvert") == "Ouvert"]}) if alert_log_simple else []
+                content = (
+                    f"Score de securite actuel : {score_simple}/100. {n_open_simple} situation(s) encore "
+                    f"non traitee(s) sur {len(alert_log_simple)} au total. Categories concernees par les "
+                    f"situations non traitees : {categories_ouvertes if categories_ouvertes else 'aucune'}."
+                )
+                with st.spinner("Lieutenant Cyber prepare son avis..."):
+                    avis = ask_gemini(client, content, system_instruction=ORG_EXECUTIVE_SYSTEM_PROMPT, cache=st.session_state)
+                st.session_state.lc_executive_avis = avis
+            if st.session_state.get("lc_executive_avis"):
+                with st.chat_message("assistant"):
+                    st.write(f"**🎖️ Lieutenant Cyber** : {st.session_state.lc_executive_avis}")
 
     # ---------------------------------------------------------------- Tab 1 : Dashboard
     with tab_dashboard:
