@@ -533,9 +533,12 @@ def render_landing():
             unsafe_allow_html=True,
         )
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Entrer dans l'Espace Grand Public →", type="primary", use_container_width=True, key="landing_pub"):
-            st.session_state.view = "public"
-            st.rerun()
+        # L'Espace Grand Public est desormais maintenu uniquement sur la version web
+        # independante (Vercel) - plus complete et a jour (lecons visuelles, analyse
+        # d'image, fil de tendances, Pass, reconnaissance vocale). Redirection plutot
+        # que de maintenir deux versions divergentes de la meme experience.
+        st.link_button("Entrer dans l'Espace Grand Public →", "https://kimatey-finnet-guard.vercel.app/public.html",
+                        type="primary", use_container_width=True)
 
 
 def render_organisation_login_gate():
@@ -1514,6 +1517,10 @@ def render_transactions_module():
 # ==================================================================
 # Vue : Espace Grand Public (2 onglets : Assistant + Sensibilisation)
 # ==================================================================
+# DEPRECIEE - plus jamais appelee (voir dispatch principal en fin de fichier,
+# qui redirige desormais vers la version web independante sur Vercel). Code
+# conserve pour reference mais non maintenu ; ne pas modifier ici, modifier
+# web/public.html.
 def render_public_view():
     if st.button("← Retour a l'accueil", key="back_pub"):
         st.session_state.view = "landing"
@@ -1876,8 +1883,21 @@ if st.session_state.view == "landing":
     render_landing()
 elif st.session_state.view == "organisation":
     render_organisation_view()
+elif st.session_state.view == "public":
+    # L'Espace Grand Public Streamlit est deprecie au profit de la version web
+    # independante (Vercel), plus complete et seule maintenue desormais. On ne
+    # rend plus jamais l'ancienne implementation, meme via un lien direct
+    # ?view=public - redirection systematique vers la version a jour.
+    st.markdown('<p class="landing-title">Cet espace a demenage</p>', unsafe_allow_html=True)
+    st.write("L'Espace Grand Public est desormais disponible sur notre page web dediee, plus complete.")
+    st.link_button("Ouvrir l'Espace Grand Public →", "https://kimatey-finnet-guard.vercel.app/public.html",
+                    type="primary", use_container_width=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("← Retour a l'accueil"):
+        st.session_state.view = "landing"
+        st.rerun()
 else:
-    render_public_view()
+    render_landing()
 
 st.markdown("---")
 st.caption("Interface developpee avec Streamlit - Realise par Komoe Edgar Junior - Responsable de l'enseignement : Dr ASSOHOUN E Stanislas - Projet ML Master 1 UFRMI")
