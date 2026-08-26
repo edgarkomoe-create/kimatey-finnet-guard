@@ -97,6 +97,12 @@ def _load_model_on_startup():
         service.info["name"], service.info["accuracy"], len(service.selected_features),
         time.time() - t0,
     )
+    from core import db
+    if db.database_configured():
+        db.init_schema()
+        logger.info("Base de donnees persistante detectee (DATABASE_URL) - schema initialise.")
+    else:
+        logger.info("Aucune DATABASE_URL configuree - stockage fichier JSON (non persistant sur Render gratuit).")
 
 
 @app.get("/", tags=["Meta"], summary="Informations generales")

@@ -59,6 +59,8 @@ from typing import Optional
 
 from fastapi import Header, HTTPException, status
 
+from core import db
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_ORGS_FILE = BASE_DIR / "api" / "orgs.json"
 DEFAULT_USERS_FILE = BASE_DIR / "api" / "users.json"
@@ -157,27 +159,58 @@ def _save_users(users: list) -> None:
 
 
 def register_user(email: str, password: str) -> None:
-    """Mode 'self_signup' : cree un compte email + mot de passe dans
-    api/users.json (mot de passe hashe-sale, jamais stocke en clair).
+    """Mode 'self_signup' : cree un compte email + mot de passe (mot de passe
+    hashe-sale, jamais stocke en clair). Utilise PostgreSQL si DATABASE_URL est
+    configuree (persistant, survit aux redeploiements) ; sinon repli sur
+    api/users.json (ephemere sur le plan gratuit Render - voir core/db.py).
     Leve EmailDejaUtilise si un compte existe deja avec cet email
     (comparaison insensible a la casse : Jean@X.com == jean@x.com)."""
     email_normalise = email.strip().lower()
+    salt = os.urandom(16).hex()
+    password_hash = hash_password(password, salt)
+
+    if db.database_configured():
+        db.init_schema()
+        try:
+            with db.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT 1 FROM users WHERE email = %s", (email_normalise,))
+                    if cur.fetchone():
+                        raise EmailDejaUtilise(f"Un compte existe deja avec l'email '{email_normalise}'.")
+                    cur.execute(
+                        "INSERT INTO users (email, salt, password_hash) VALUES (%s, %s, %s)",
+                        (email_normalise, salt, password_hash),
+                    )
+        except EmailDejaUtilise:
+            raise
+        return
+
     users = _load_users()
     if any(u.get("email") == email_normalise for u in users):
         raise EmailDejaUtilise(f"Un compte existe deja avec l'email '{email_normalise}'.")
-    salt = os.urandom(16).hex()
     users.append({
-        "email": email_normalise,
-        "salt": salt,
-        "password_hash": hash_password(password, salt),
+        "email": email_normalise, "salt": salt, "password_hash": password_hash,
         "created_at": time.time(),
     })
     _save_users(users)
 
 
 def verify_user_credentials(email: str, password: str) -> bool:
-    """Mode 'self_signup' : verifie (email, password) contre api/users.json."""
+    """Mode 'self_signup' : verifie (email, password) contre PostgreSQL (si
+    configure) ou api/users.json (repli)."""
     email_normalise = (email or "").strip().lower()
+
+    if db.database_configured():
+        db.init_schema()
+        with db.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT salt, password_hash FROM users WHERE email = %s", (email_normalise,))
+                row = cur.fetchone()
+                if not row:
+                    return False
+                salt, password_hash = row
+                return hmac.compare_digest(hash_password(password, salt), password_hash)
+
     for user in _load_users():
         if user.get("email") == email_normalise:
             return hmac.compare_digest(hash_password(password, user["salt"]), user["password_hash"])

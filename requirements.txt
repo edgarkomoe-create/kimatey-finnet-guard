@@ -8,6 +8,10 @@ fastapi>=0.110
 uvicorn[standard]>=0.27
 python-multipart>=0.0.9
 google-genai>=1.0
+# Pilote PostgreSQL - utilise uniquement si la variable d'environnement DATABASE_URL est
+# configuree (ex. Neon, Supabase, Render Postgres). Sans elle, repli automatique sur le
+# stockage fichier JSON existant (voir core/db.py) - aucune rupture en local sans base.
+psycopg[binary]>=3.1
 
 # Optionnel : necessaire uniquement si AUTH_MODE=firebase avec un vrai projet Firebase
 # (voir README, section Authentification). Non installe par defaut.
