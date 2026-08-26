@@ -15,6 +15,8 @@ import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from core import db
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 ORG_STATE_FILE = BASE_DIR / "outputs" / "organisation_state.json"
 
@@ -23,7 +25,53 @@ CLASS_NAMES = {0: "Normal / Legitime", 1: "Scan de Ports / Reconnaissance",
 SEVERITY_WEIGHT = {1: 1, 2: 2, 3: 3}  # 1=scan (faible), 2=DDoS (eleve), 3=infiltration (critique)
 
 
+def _load_org_state_pg() -> dict:
+    db.init_schema()
+    with db.get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, horodatage, source, menace, confiance, details, statut, fermee_le "
+                "FROM alerts ORDER BY seq DESC"
+            )
+            alert_log = [
+                {
+                    "ID": row[0], "Horodatage": row[1], "Source": row[2], "Menace": row[3],
+                    "Confiance (%)": row[4], "Details": row[5] or "", "Statut": row[6], "Fermee_le": row[7],
+                }
+                for row in cur.fetchall()
+            ]
+            cur.execute("SELECT horodatage, score FROM score_history ORDER BY seq ASC")
+            score_history = [{"Horodatage": row[0], "Score": row[1]} for row in cur.fetchall()]
+    return {"alert_log": alert_log, "score_history": score_history}
+
+
+def _save_org_state_pg(state: dict) -> None:
+    """Remplacement complet (delete + reinsert) - simple et correct a l'echelle
+    d'une demo (quelques centaines d'alertes au plus), evite une logique de
+    diff plus complexe."""
+    db.init_schema()
+    with db.get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM alerts")
+            for entry in reversed(state.get("alert_log", [])):  # reversed : le plus ancien insere en premier
+                cur.execute(
+                    "INSERT INTO alerts (id, horodatage, source, menace, confiance, details, statut, fermee_le) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                    (entry["ID"], entry["Horodatage"], entry.get("Source"), entry.get("Menace"),
+                     entry.get("Confiance (%)"), entry.get("Details", ""), entry.get("Statut", "Ouvert"),
+                     entry.get("Fermee_le")),
+                )
+            cur.execute("DELETE FROM score_history")
+            for entry in state.get("score_history", []):
+                cur.execute(
+                    "INSERT INTO score_history (horodatage, score) VALUES (%s, %s)",
+                    (entry["Horodatage"], entry["Score"]),
+                )
+
+
 def load_org_state() -> dict:
+    if db.database_configured():
+        return _load_org_state_pg()
     if ORG_STATE_FILE.exists():
         with open(ORG_STATE_FILE) as f:
             return json.load(f)
@@ -31,29 +79,58 @@ def load_org_state() -> dict:
 
 
 def save_org_state(state: dict) -> None:
+    if db.database_configured():
+        _save_org_state_pg(state)
+        return
     ORG_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(ORG_STATE_FILE, "w") as f:
         json.dump(state, f, indent=2, ensure_ascii=False)
 
 
 def log_alert(source_label: str, pred_class: int, confidence: float, details: str = "") -> None:
-    if pred_class != 0:
-        state = load_org_state()
-        state.setdefault("alert_log", []).insert(0, {
-            "ID": str(uuid.uuid4())[:8],
-            "Horodatage": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "Source": source_label,
-            "Menace": CLASS_NAMES[pred_class],
-            "Confiance (%)": round(confidence, 1),
-            "Details": details,
-            "Statut": "Ouvert",
-            "Fermee_le": None,
-        })
-        save_org_state(state)
+    if pred_class == 0:
+        return
+    entry_id = str(uuid.uuid4())[:8]
+    horodatage = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if db.database_configured():
+        db.init_schema()
+        with db.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO alerts (id, horodatage, source, menace, confiance, details, statut, fermee_le) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                    (entry_id, horodatage, source_label, CLASS_NAMES[pred_class], round(confidence, 1),
+                     details, "Ouvert", None),
+                )
+        return
+    state = load_org_state()
+    state.setdefault("alert_log", []).insert(0, {
+        "ID": entry_id, "Horodatage": horodatage, "Source": source_label,
+        "Menace": CLASS_NAMES[pred_class], "Confiance (%)": round(confidence, 1),
+        "Details": details, "Statut": "Ouvert", "Fermee_le": None,
+    })
+    save_org_state(state)
 
 
 def toggle_alert_status(alert_id: str) -> bool:
     """Bascule Ouvert <-> Ferme pour une alerte precise. Retourne True si trouvee."""
+    if db.database_configured():
+        db.init_schema()
+        with db.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT statut FROM alerts WHERE id = %s", (alert_id,))
+                row = cur.fetchone()
+                if not row:
+                    return False
+                is_open = row[0] == "Ouvert"
+                new_statut = "Ferme" if is_open else "Ouvert"
+                new_fermee_le = datetime.now().strftime("%Y-%m-%d %H:%M:%S") if is_open else None
+                cur.execute(
+                    "UPDATE alerts SET statut = %s, fermee_le = %s WHERE id = %s",
+                    (new_statut, new_fermee_le, alert_id),
+                )
+        return True
+
     state = load_org_state()
     found = False
     for a in state.get("alert_log", []):
@@ -84,10 +161,22 @@ def compute_security_score(alert_log: list) -> int:
 
 
 def record_score_snapshot(score: int) -> dict:
+    horodatage = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if db.database_configured():
+        db.init_schema()
+        with db.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("INSERT INTO score_history (horodatage, score) VALUES (%s, %s)", (horodatage, score))
+                # Garde uniquement les 50 derniers points (coherent avec le comportement JSON)
+                cur.execute("""
+                    DELETE FROM score_history WHERE seq NOT IN (
+                        SELECT seq FROM score_history ORDER BY seq DESC LIMIT 50
+                    )
+                """)
+        return load_org_state()
+
     state = load_org_state()
-    state.setdefault("score_history", []).append(
-        {"Horodatage": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Score": score}
-    )
+    state.setdefault("score_history", []).append({"Horodatage": horodatage, "Score": score})
     state["score_history"] = state["score_history"][-50:]
     save_org_state(state)
     return state

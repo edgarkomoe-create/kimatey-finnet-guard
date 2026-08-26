@@ -60,3 +60,23 @@ def init_schema():
                     created_at TIMESTAMPTZ DEFAULT NOW()
                 )
             """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS alerts (
+                    seq SERIAL PRIMARY KEY,
+                    id TEXT UNIQUE NOT NULL,
+                    horodatage TEXT NOT NULL,
+                    source TEXT,
+                    menace TEXT,
+                    confiance DOUBLE PRECISION,
+                    details TEXT,
+                    statut TEXT,
+                    fermee_le TEXT
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS score_history (
+                    seq SERIAL PRIMARY KEY,
+                    horodatage TEXT NOT NULL,
+                    score INTEGER NOT NULL
+                )
+            """)
