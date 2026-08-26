@@ -193,6 +193,30 @@ class TransactionBatchSummary(BaseModel):
     avertissement: str = "Modele prototype entraine sur des donnees SYNTHETIQUES - non valide sur de vraies transactions."
 
 
+# ---------------------------------------------------------------- Systeme de Pass (MODE DEMO, pas de vrai paiement)
+class PassInfo(BaseModel):
+    id: str
+    nom: str
+    prix_fcfa: int
+    duree_jours: Optional[int]
+    quotas: dict
+    fonctionnalites: list[str]
+    description: str
+
+
+class ActivePassResponse(BaseModel):
+    pass_id: str
+    nom: str
+    usage: dict
+    quotas: dict
+    expire_le: Optional[float]
+    mode_demo: bool = True
+
+
+class SouscrirePassRequest(BaseModel):
+    pass_id: str = Field(..., description="Identifiant du Pass a souscrire (voir /pass/catalogue)")
+
+
 # ---------------------------------------------------------------- Sensibilisation ludique (fusion gamification)
 class GameScenarioOut(BaseModel):
     situation: str

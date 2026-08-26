@@ -35,8 +35,12 @@ from api.schemas import (
     ExplainFlowRequest, ExplainBatchRequest, ExplainResponse,
     PublicProgressIn, PublicProgressOut, TendancesResponse,
     TransactionIn, TransactionPredictionResponse, TransactionBatchSummary,
+    PassInfo, ActivePassResponse, SouscrirePassRequest,
 )
 from api.transaction_model_service import get_transaction_model_service
+from core.pass_system import (
+    get_catalog, get_active_pass, souscrire as pass_souscrire, check_and_increment_quota,
+)
 from api.model_service import get_model_service, CLASS_NAMES
 from api.auth import (
     require_org_auth, create_token, verify_shared_password, verify_org_credentials,
@@ -386,7 +390,21 @@ def assistant_chat(payload: AssistantChatRequest):
     summary="Analyser une capture d'ecran (SMS/message suspect) avec l'assistant Kimatey",
 )
 async def assistant_chat_image(image: UploadFile = File(..., description="Capture d'ecran du SMS/message suspect (JPEG/PNG)"),
-                                message: str = ""):
+                                message: str = "", account_id: str = "anonyme"):
+    # Garde-fou produit : le chat texte de base (/assistant/chat) reste TOUJOURS gratuit et
+    # illimite - seule l'analyse d'image (confort additionnel) est soumise au quota du Pass
+    # actif. Un compte anonyme (aucun compte optionnel connecte) partage un quota commun
+    # "anonyme" cote public - avoir un compte optionnel permet un suivi individuel du quota.
+    allowed, quota_info = check_and_increment_quota("public", account_id, "images_mois")
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=(
+                f"Quota d'analyses d'image atteint pour ce mois ({quota_info['utilise']}/{quota_info['limite']} "
+                f"avec le Pass '{quota_info['pass_actuel']}'). Le chat texte reste gratuit et illimite. "
+                "Voir /pass/catalogue pour les options."
+            ),
+        )
     if image.content_type not in ("image/jpeg", "image/png", "image/webp"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -619,4 +637,50 @@ async def predict_transaction_csv(file: UploadFile = File(..., description="CSV 
         n_total=len(df),
         n_suspectes=n_suspect,
         taux_suspect=round(n_suspect / len(df) * 100, 1) if len(df) > 0 else 0.0,
+    )
+
+
+# ==================================================================
+# Systeme de Pass (MODE DEMO - aucun paiement reel encaisse, voir
+# docs/ROADMAP_PAIEMENT.md pour l'integration Orange Money/MTN Mobile Money)
+# ==================================================================
+@app.get(
+    "/pass/catalogue", response_model=list[PassInfo], tags=["Meta"],
+    summary="Catalogue des Pass disponibles pour un scope donne (organisation ou public)",
+)
+def pass_catalogue(scope: str):
+    if scope not in ("organisation", "public"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="scope doit etre 'organisation' ou 'public'")
+    return get_catalog(scope)
+
+
+@app.get(
+    "/pass/actif", response_model=ActivePassResponse, tags=["Meta"],
+    summary="Pass actuellement actif pour un compte (organisation ou public, avec compte optionnel)",
+)
+def pass_actif(scope: str, account_id: str):
+    if scope not in ("organisation", "public"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="scope doit etre 'organisation' ou 'public'")
+    active = get_active_pass(scope, account_id)
+    return ActivePassResponse(
+        pass_id=active["pass_id"], nom=active["definition"]["nom"], usage=active["usage"],
+        quotas=active["definition"]["quotas"], expire_le=active.get("expire_le"),
+    )
+
+
+@app.post(
+    "/pass/souscrire", response_model=ActivePassResponse, tags=["Meta"],
+    summary="[MODE DEMO] Active un Pass pour un compte - aucun paiement reel n'est encaisse",
+)
+def pass_souscrire_endpoint(scope: str, account_id: str, payload: SouscrirePassRequest):
+    if scope not in ("organisation", "public"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="scope doit etre 'organisation' ou 'public'")
+    try:
+        entry = pass_souscrire(scope, account_id, payload.pass_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    active = get_active_pass(scope, account_id)
+    return ActivePassResponse(
+        pass_id=entry["pass_id"], nom=active["definition"]["nom"], usage=entry["usage"],
+        quotas=active["definition"]["quotas"], expire_le=entry.get("expire_le"),
     )

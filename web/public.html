@@ -235,9 +235,10 @@ document.getElementById("chat-image-input").addEventListener("change", async (e)
   const question = document.getElementById("chat-input").value.trim();
   if (question) formData.append("message", question);
   document.getElementById("chat-input").value = "";
+  const acctEmail = localStorage.getItem(PUBLIC_EMAIL_KEY) || "anonyme";
 
   try {
-    const r = await fetch(API_BASE_URL + "/assistant/chat_image", { method: "POST", body: formData });
+    const r = await fetch(API_BASE_URL + "/assistant/chat_image?account_id=" + encodeURIComponent(acctEmail), { method: "POST", body: formData });
     if (!r.ok) {
       const body = await r.json().catch(() => ({}));
       chatMessages.push({ role: "error", content: body.detail || t("chat_unavailable") });
@@ -778,11 +779,13 @@ function renderAccount() {
   if (token && email) {
     el.innerHTML =
       '<div class="hint" style="margin-bottom:.8rem">' + t("account_connected_as") + ' <b>' + email + '</b> ' +
-      '<button class="btn secondary" id="account-logout" style="margin-left:.6rem">' + t("account_logout") + '</button></div>';
+      '<button class="btn secondary" id="account-logout" style="margin-left:.6rem">' + t("account_logout") + '</button></div>' +
+      '<div id="pass-status-container"></div>';
     document.getElementById("account-logout").addEventListener("click", () => {
       clearPublicSession();
       renderAccount();
     });
+    renderPassStatus(email);
     return;
   }
 
@@ -795,10 +798,59 @@ function renderAccount() {
       '<button class="btn" id="account-register">' + t("account_register") + '</button> ' +
       '<button class="btn secondary" id="account-login">' + t("account_login") + '</button>' +
       '<div id="account-error" class="hint" style="color:#e5484d"></div>' +
-    '</div></details>';
+    '</div></details>' +
+    '<div id="pass-status-container"></div>';
 
   document.getElementById("account-register").addEventListener("click", () => submitAccount("register"));
   document.getElementById("account-login").addEventListener("click", () => submitAccount("login"));
+  renderPassStatus("anonyme");
+}
+
+// ==========================================================================
+// Systeme de Pass (MODE DEMO - voir core/pass_system.py, aucun paiement reel).
+// Garde-fou produit : le chat texte de base reste toujours gratuit et
+// illimite, quel que soit le Pass ; seule l'analyse d'image est quotee.
+// ==========================================================================
+async function renderPassStatus(accountId) {
+  const el = document.getElementById("pass-status-container");
+  if (!el) return;
+  try {
+    const r = await fetch(API_BASE_URL + "/pass/actif?scope=public&account_id=" + encodeURIComponent(accountId));
+    const active = await r.json();
+    const used = active.usage.images_mois || 0;
+    const limit = active.quotas.images_mois;
+    const limitStr = limit === null || limit === undefined ? "∞" : limit;
+    let html = '<p class="hint">🎟️ ' + t("pass_current") + ' <b>' + active.nom + '</b> — ' +
+      t("pass_images_used") + ' ' + used + ' / ' + limitStr + '</p>';
+    if (active.pass_id === "pub_gratuit") {
+      html += '<button class="btn secondary" id="pass-upgrade-btn">' + t("pass_upgrade_cta") + '</button>';
+    }
+    el.innerHTML = html;
+    const upgradeBtn = document.getElementById("pass-upgrade-btn");
+    if (upgradeBtn) {
+      upgradeBtn.addEventListener("click", () => subscribeToPass(accountId));
+    }
+  } catch (e) {
+    el.innerHTML = "";
+  }
+}
+
+async function subscribeToPass(accountId) {
+  if (accountId === "anonyme") {
+    alert(t("pass_needs_account"));
+    return;
+  }
+  if (!confirm(t("pass_demo_confirm"))) return;
+  try {
+    await fetch(API_BASE_URL + "/pass/souscrire?scope=public&account_id=" + encodeURIComponent(accountId), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pass_id: "pub_famille" }),
+    });
+    renderPassStatus(accountId);
+  } catch (e) {
+    alert(t("account_server_error"));
+  }
 }
 
 async function submitAccount(mode) {

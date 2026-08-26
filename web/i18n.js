@@ -164,6 +164,13 @@ const I18N = {
     trends_contributions: "contributions",
     trends_by_canal: "Par canal utilisé :",
     trends_by_demande: "Par type de demande :",
+
+    // ---- Systeme de Pass (mode demo) ----
+    pass_current: "Pass actuel :",
+    pass_images_used: "Images analysées ce mois :",
+    pass_upgrade_cta: "🎟️ Découvrir le Pass Famille (démo)",
+    pass_needs_account: "Créez d'abord un compte optionnel ci-dessus pour souscrire à un Pass.",
+    pass_demo_confirm: "Mode démo : aucun paiement réel ne sera prélevé. Activer le Pass Famille (démonstration) ?",
   },
 
   en: {
@@ -316,6 +323,13 @@ const I18N = {
     trends_contributions: "contributions",
     trends_by_canal: "By channel used:",
     trends_by_demande: "By type of request:",
+
+    // ---- Pass system (demo mode) ----
+    pass_current: "Current Pass:",
+    pass_images_used: "Images analyzed this month:",
+    pass_upgrade_cta: "🎟️ Discover the Family Pass (demo)",
+    pass_needs_account: "Create an optional account above first to subscribe to a Pass.",
+    pass_demo_confirm: "Demo mode: no real payment will be charged. Activate the Family Pass (demonstration)?",
   },
 };
 
