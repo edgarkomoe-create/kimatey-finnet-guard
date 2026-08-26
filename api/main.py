@@ -36,7 +36,7 @@ from api.schemas import (
     PublicProgressIn, PublicProgressOut, TendancesResponse,
     TransactionIn, TransactionPredictionResponse, TransactionBatchSummary,
     PassInfo, ActivePassResponse, SouscrirePassRequest, SensitivityResponse, SetSensitivityRequest,
-    EnrichedModelStatus,
+    EnrichedModelStatus, AlertOut, SocDashboardResponse, ToggleAlertResponse,
 )
 from api.transaction_model_service import get_transaction_model_service
 from core.pass_system import (
@@ -44,6 +44,10 @@ from core.pass_system import (
 )
 from core.sensitivity import get_threshold, set_threshold, DEFAULT_THRESHOLD
 from core.enriched_model import generate_enriched_model, get_enriched_model_status
+from core.alert_log import (
+    load_org_state, log_alert as record_alert, toggle_alert_status,
+    compute_security_score, mttr_hours, trend_delta_pct, severity_breakdown, day_severity_series,
+)
 from api.model_service import get_model_service, CLASS_NAMES
 from api.auth import (
     require_org_auth, create_token, verify_shared_password, verify_org_credentials,
@@ -223,6 +227,12 @@ async def predict_csv(file: UploadFile = File(..., description="CSV contenant le
     df_out["Menace_Predite"] = [CLASS_NAMES[int(p)] for p in preds]
     df_out["Confiance_pct"] = [round(float(pr.max()) * 100, 2) for pr in probas]
     n_threats = int((preds != 0).sum())
+
+    # Journalise les alertes dans le meme fichier partage que Streamlit (voir core/alert_log.py) -
+    # limite a 500 par lot, meme discipline que l'import CSV cote Streamlit.
+    for i, p in enumerate(preds[:500]):
+        if int(p) != 0:
+            record_alert(f"Import CSV (API) - ligne {i+1}", int(p), float(probas[i].max()) * 100)
 
     return JSONResponse({
         "summary": {
@@ -756,3 +766,54 @@ def modele_enrichi_generer(user=Depends(require_org_auth)):
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     return get_enriched_model_status(account_id)
+
+
+# ==================================================================
+# Dashboard SOC (donnees pour une page web animee, en plus de l'onglet
+# Streamlit existant - les deux lisent/ecrivent le meme fichier partage,
+# voir core/alert_log.py)
+# ==================================================================
+def _build_soc_dashboard() -> SocDashboardResponse:
+    state = load_org_state()
+    alert_log = state.get("alert_log", [])
+    n_open = len([a for a in alert_log if a.get("Statut", "Ouvert") == "Ouvert"])
+    n_closed = len(alert_log) - n_open
+    treated_rate = round(100 * n_closed / len(alert_log), 1) if alert_log else 0.0
+    delta_pct, delta_text = trend_delta_pct(alert_log, days=7)
+    return SocDashboardResponse(
+        score=compute_security_score(alert_log),
+        n_open=n_open,
+        n_closed=n_closed,
+        treated_rate_pct=treated_rate,
+        mttr_hours=mttr_hours(alert_log),
+        trend_delta_pct=delta_pct,
+        trend_text=delta_text,
+        severity_breakdown=severity_breakdown(alert_log),
+        day_severity_series=day_severity_series(alert_log, days=14),
+        alerts=[
+            AlertOut(
+                ID=a["ID"], Horodatage=a["Horodatage"], Source=a["Source"], Menace=a["Menace"],
+                Confiance=a["Confiance (%)"], Statut=a.get("Statut", "Ouvert"), Fermee_le=a.get("Fermee_le"),
+            )
+            for a in alert_log[:200]
+        ],
+    )
+
+
+@app.get(
+    "/organisation/dashboard_soc", response_model=SocDashboardResponse, tags=["Organisation"],
+    summary="Etat operationnel complet (score, alertes, tendances) pour le dashboard SOC",
+    dependencies=[Depends(require_org_auth)],
+)
+def organisation_dashboard_soc():
+    return _build_soc_dashboard()
+
+
+@app.post(
+    "/organisation/dashboard_soc/toggle/{alert_id}", response_model=ToggleAlertResponse, tags=["Organisation"],
+    summary="Bascule le statut Ouvert/Ferme d'une alerte, retourne le dashboard mis a jour",
+    dependencies=[Depends(require_org_auth)],
+)
+def organisation_dashboard_toggle(alert_id: str):
+    found = toggle_alert_status(alert_id)
+    return ToggleAlertResponse(found=found, dashboard=_build_soc_dashboard())

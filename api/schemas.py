@@ -241,6 +241,35 @@ class EnrichedModelStatus(BaseModel):
     generated_at: Optional[str] = None
 
 
+# ---------------------------------------------------------------- Dashboard SOC (pour une page web animee)
+class AlertOut(BaseModel):
+    ID: str
+    Horodatage: str
+    Source: str
+    Menace: str
+    Confiance: float
+    Statut: str
+    Fermee_le: Optional[str] = None
+
+
+class SocDashboardResponse(BaseModel):
+    score: int
+    n_open: int
+    n_closed: int
+    treated_rate_pct: float
+    mttr_hours: Optional[float]
+    trend_delta_pct: Optional[float]
+    trend_text: str
+    severity_breakdown: dict
+    day_severity_series: dict
+    alerts: list[AlertOut]
+
+
+class ToggleAlertResponse(BaseModel):
+    found: bool
+    dashboard: SocDashboardResponse
+
+
 # ---------------------------------------------------------------- Sensibilisation ludique (fusion gamification)
 class GameScenarioOut(BaseModel):
     situation: str
