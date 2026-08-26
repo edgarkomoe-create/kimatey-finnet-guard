@@ -227,4 +227,8 @@ body {
 .badge-item { font-size: .88rem; padding: .5rem .7rem; border-radius: 8px; background: var(--navy-mid); transition: transform .15s ease, opacity .3s ease; }
 .badge-item:hover { transform: translateY(-2px); }
 .badge-item.locked { opacity: .55; }
+
+/* ---- Boucliers de protection (remplacent les coeurs, coherent avec le theme "Points Bouclier") ---- */
+.shield-life { display: inline-block; transition: filter .3s ease, opacity .3s ease, transform .2s ease; }
+.shield-life.lost { filter: grayscale(1); opacity: .3; transform: scale(.92); }
 .no-value-note { font-size: .78rem; color: var(--text-muted); margin: .5rem 0 1.1rem 0; font-style: italic; }

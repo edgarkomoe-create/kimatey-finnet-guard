@@ -355,7 +355,9 @@ function renderGameHeader() {
   if (!gameMeta) { el.innerHTML = ""; return; }
   const level = computeLevel(gameState.xp, gameMeta.levels);
   const unlocked = unlockedBadges(gameState.xp, gameMeta.badges);
-  const heartsStr = "❤️ ".repeat(gameState.hearts) + "🖤 ".repeat(gameMeta.max_hearts - gameState.hearts);
+  const heartsStr =
+    '<span class="shield-life">🛡️</span> '.repeat(gameState.hearts) +
+    '<span class="shield-life lost">🛡️</span> '.repeat(gameMeta.max_hearts - gameState.hearts);
   const nextTxt = level.nextThreshold ? (t("g_next_level") + level.nextThreshold + t("g_shield_suffix")) : t("g_max_level");
   el.innerHTML =
     '<div class="game-cards">' +
