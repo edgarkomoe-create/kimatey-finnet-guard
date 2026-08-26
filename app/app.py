@@ -25,6 +25,7 @@ import streamlit as st
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 # `streamlit run app/app.py` n'ajoute que le dossier app/ a sys.path (pas la racine
@@ -295,6 +296,24 @@ def style_dark_fig(fig, ax):
         legend.get_frame().set_edgecolor(GRID_COLOR)
         for text in legend.get_texts():
             text.set_color(TEXT_LIGHT)
+
+
+def plotly_dark_layout(fig, title=None, height=340):
+    """Applique le theme sombre navy/teal a une figure Plotly (equivalent
+    interactif de style_dark_fig pour matplotlib) : survol, zoom, panoramique
+    fonctionnent nativement, contrairement a une image matplotlib statique."""
+    fig.update_layout(
+        paper_bgcolor=NAVY_LIGHT, plot_bgcolor=NAVY_LIGHT,
+        font=dict(color=TEXT_LIGHT, size=12),
+        title=dict(text=title, font=dict(color=TEXT_LIGHT, size=13)) if title else None,
+        margin=dict(l=10, r=10, t=40 if title else 10, b=10),
+        height=height,
+        legend=dict(bgcolor=NAVY_MID, bordercolor=GRID_COLOR, borderwidth=1, font=dict(color=TEXT_LIGHT, size=10)),
+        hoverlabel=dict(bgcolor=NAVY_MID, font_color=TEXT_LIGHT, bordercolor=TEAL),
+    )
+    fig.update_xaxes(gridcolor=GRID_COLOR, zerolinecolor=GRID_COLOR, color=TEXT_LIGHT, tickfont=dict(size=10))
+    fig.update_yaxes(gridcolor=GRID_COLOR, zerolinecolor=GRID_COLOR, color=TEXT_LIGHT, tickfont=dict(size=10))
+    return fig
 
 
 def preprocess_raw_df(df_raw):
@@ -723,15 +742,14 @@ def render_reseau_module():
             if (OUT_DIR / "optimized_results.csv").exists():
                 df_opt = pd.read_csv(OUT_DIR / "optimized_results.csv")
                 st.dataframe(df_opt, use_container_width=True, hide_index=True)
-                fig, ax = plt.subplots(figsize=(6, 4))
-                ax.bar(df_opt["Modele"].str.replace("_optimise", ""), df_opt["Exactitude"], color=TEAL)
-                ax.set_ylabel("Exactitude")
-                ax.set_ylim(0.9, 1.0)
-                plt.xticks(rotation=30, ha="right", fontsize=8)
-                style_dark_fig(fig, ax)
-                fig.tight_layout()
-                st.pyplot(fig)
-                plt.close(fig)
+                fig = go.Figure(data=[go.Bar(
+                    x=df_opt["Modele"].str.replace("_optimise", ""), y=df_opt["Exactitude"],
+                    marker_color=TEAL, text=(df_opt["Exactitude"] * 100).round(2).astype(str) + "%",
+                    textposition="outside", textfont=dict(color=TEXT_LIGHT, size=10),
+                )])
+                fig.update_yaxes(title="Exactitude", range=[0.9, 1.0])
+                plotly_dark_layout(fig, height=340)
+                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
         with c2:
             st.markdown("**Le systeme sait-il bien reconnaitre chaque type de menace ?**")
             st.markdown('<p class="chart-hint">Plus une courbe se rapproche du coin superieur gauche, mieux le systeme '
@@ -912,14 +930,13 @@ def render_reseau_module():
             )
 
             st.markdown("<br>", unsafe_allow_html=True)
-            fig, ax = plt.subplots(figsize=(6, 3.5))
-            ax.bar(dist.index, dist.values, color=[CLASS_COLORS[c] for c in CLASSES if CLASS_NAMES[c] in dist.index])
-            plt.xticks(rotation=15, ha="right", fontsize=8)
-            ax.set_ylabel("Nombre de flux")
-            style_dark_fig(fig, ax)
-            fig.tight_layout()
-            st.pyplot(fig)
-            plt.close(fig)
+            fig = go.Figure(data=[go.Bar(
+                x=dist.index, y=dist.values,
+                marker_color=[CLASS_COLORS[c] for c in CLASSES if CLASS_NAMES[c] in dist.index],
+            )])
+            fig.update_yaxes(title="Nombre de flux")
+            plotly_dark_layout(fig, height=320)
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
             # ---- Vues adaptatives : uniquement si les colonnes correspondantes ont ete detectees ----
             enrichment = data.get("enrichment", {})
@@ -933,14 +950,13 @@ def render_reseau_module():
                     try:
                         dates = pd.to_datetime(threats_only[ts_col]).dt.date
                         daily = dates.value_counts().sort_index()
-                        fig, ax = plt.subplots(figsize=(6, 3.5))
-                        ax.plot(daily.index.astype(str), daily.values, color=TEAL, marker="o", markersize=4)
-                        ax.set_ylabel("Menaces detectees")
-                        plt.xticks(rotation=30, ha="right", fontsize=8)
-                        style_dark_fig(fig, ax)
-                        fig.tight_layout()
-                        st.pyplot(fig)
-                        plt.close(fig)
+                        fig = go.Figure(data=[go.Scatter(
+                            x=daily.index.astype(str), y=daily.values, mode="lines+markers",
+                            line=dict(color=TEAL, width=2), marker=dict(size=7, color=TEAL),
+                        )])
+                        fig.update_yaxes(title="Menaces detectees")
+                        plotly_dark_layout(fig, height=320)
+                        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
                     except (ValueError, TypeError):
                         st.info("Colonne d'horodatage detectee mais format illisible - chronologie indisponible.")
                 else:
@@ -952,13 +968,13 @@ def render_reseau_module():
                 st.markdown("**Repartition geographique des menaces**")
                 if "pays" in enrichment and len(threats_only) > 0:
                     top_pays = threats_only[enrichment["pays"]].value_counts().head(8)
-                    fig, ax = plt.subplots(figsize=(6, 3.5))
-                    ax.barh(top_pays.index[::-1], top_pays.values[::-1], color=CLASS_COLORS[2])
-                    ax.set_xlabel("Menaces detectees")
-                    style_dark_fig(fig, ax)
-                    fig.tight_layout()
-                    st.pyplot(fig)
-                    plt.close(fig)
+                    fig = go.Figure(data=[go.Bar(
+                        x=top_pays.values[::-1], y=top_pays.index[::-1], orientation="h",
+                        marker_color=CLASS_COLORS[2],
+                    )])
+                    fig.update_xaxes(title="Menaces detectees")
+                    plotly_dark_layout(fig, height=320)
+                    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
                 elif "ip" in enrichment:
                     st.info(
                         "Une colonne IP source est presente, mais la resolution geographique par IP "
@@ -1032,13 +1048,15 @@ def render_reseau_module():
                 "Classe": [CLASS_NAMES[c] for c in CLASSES],
                 "Probabilite (%)": [round(probas_row[c] * 100, 2) for c in CLASSES],
             })
-            fig, ax = plt.subplots(figsize=(6, 3))
-            ax.barh(proba_df["Classe"], proba_df["Probabilite (%)"], color=[CLASS_COLORS[c] for c in CLASSES])
-            ax.set_xlabel("Probabilite (%)")
-            style_dark_fig(fig, ax)
-            fig.tight_layout()
-            st.pyplot(fig)
-            plt.close(fig)
+            fig = go.Figure(data=[go.Bar(
+                x=proba_df["Probabilite (%)"], y=proba_df["Classe"], orientation="h",
+                marker_color=[CLASS_COLORS[c] for c in CLASSES],
+                text=proba_df["Probabilite (%)"].astype(str) + "%", textposition="outside",
+                textfont=dict(color=TEXT_LIGHT, size=10),
+            )])
+            fig.update_xaxes(title="Probabilite (%)")
+            plotly_dark_layout(fig, height=280)
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
             if pred_class != 0:
                 st.warning("⚠️ Menace detectee - alerte ajoutee au journal.")
@@ -1092,16 +1110,13 @@ def render_reseau_module():
                                      sub="Prediction comparee a la verite terrain"), unsafe_allow_html=True)
 
         def render_chart():
-            fig, ax = plt.subplots(figsize=(5, 3.3))
             labels = [CLASS_NAMES[c].split(" / ")[0] for c in CLASSES]
             values = [st.session_state.live_dist.get(c, 0) for c in CLASSES]
-            ax.bar(labels, values, color=[CLASS_COLORS[c] for c in CLASSES])
-            ax.set_ylabel("Flux cumules")
-            plt.xticks(rotation=15, ha="right", fontsize=7)
-            style_dark_fig(fig, ax)
-            fig.tight_layout()
-            chart_ph.pyplot(fig)
-            plt.close(fig)
+            fig = go.Figure(data=[go.Bar(x=labels, y=values, marker_color=[CLASS_COLORS[c] for c in CLASSES])])
+            fig.update_yaxes(title="Flux cumules")
+            plotly_dark_layout(fig, height=300)
+            chart_ph.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False},
+                                   key=f"live_chart_{st.session_state.live_stats['n']}")
 
         def render_table():
             rows = st.session_state.live_rows
@@ -1191,33 +1206,31 @@ def render_reseau_module():
             open_alerts = [a for a in alert_log if a.get("Statut", "Ouvert") == "Ouvert"]
             if open_alerts:
                 sev_counts = pd.Series([a["Menace"] for a in open_alerts]).value_counts()
-                fig, ax = plt.subplots(figsize=(6, 3.5))
                 colors_map = {"Scan de Ports / Reconnaissance": CLASS_COLORS[1],
                               "Attaque DDoS / Volumetrique": CLASS_COLORS[2],
                               "Infiltration / Brute-Force / Exfiltration": CLASS_COLORS[3]}
-                ax.bar(sev_counts.index, sev_counts.values,
-                       color=[colors_map.get(i, TEAL) for i in sev_counts.index])
-                ax.set_ylabel("Nombre d'alertes ouvertes")
-                plt.xticks(rotation=20, ha="right", fontsize=8)
-                style_dark_fig(fig, ax)
-                fig.tight_layout()
-                st.pyplot(fig)
-                plt.close(fig)
+                fig = go.Figure(data=[go.Bar(
+                    x=sev_counts.index, y=sev_counts.values,
+                    marker_color=[colors_map.get(i, TEAL) for i in sev_counts.index],
+                )])
+                fig.update_yaxes(title="Nombre d'alertes ouvertes")
+                plotly_dark_layout(fig, height=320)
+                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("Aucune alerte ouverte actuellement.")
         with c2:
             st.markdown("**Evolution du score de securite**")
             score_hist = org_state.get("score_history", [])
             if len(score_hist) >= 2:
-                fig, ax = plt.subplots(figsize=(6, 3.5))
-                ax.plot(range(len(score_hist)), [p["Score"] for p in score_hist], color=TEAL, marker="o", markersize=3)
-                ax.set_ylim(0, 100)
-                ax.set_ylabel("Score /100")
-                ax.set_xlabel("Chargements successifs de cet onglet")
-                style_dark_fig(fig, ax)
-                fig.tight_layout()
-                st.pyplot(fig)
-                plt.close(fig)
+                fig = go.Figure(data=[go.Scatter(
+                    x=list(range(len(score_hist))), y=[p["Score"] for p in score_hist],
+                    mode="lines+markers", line=dict(color=TEAL, width=2), marker=dict(size=6, color=TEAL),
+                    fill="tozeroy", fillcolor="rgba(0,212,181,0.08)",
+                )])
+                fig.update_yaxes(title="Score /100", range=[0, 100])
+                fig.update_xaxes(title="Chargements successifs de cet onglet")
+                plotly_dark_layout(fig, height=320)
+                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("L'historique du score se construit au fil des visites de cet onglet.")
 
@@ -1250,20 +1263,18 @@ def render_reseau_module():
                 df_filtered_alerts["Jour"] = df_filtered_alerts["Horodatage_dt"].dt.date
                 pivot = df_filtered_alerts.groupby(["Jour", "Menace"]).size().unstack(fill_value=0)
 
-                fig, ax = plt.subplots(figsize=(11, 4))
                 colors_map = {"Scan de Ports / Reconnaissance": CLASS_COLORS[1],
                               "Attaque DDoS / Volumetrique": CLASS_COLORS[2],
                               "Infiltration / Brute-Force / Exfiltration": CLASS_COLORS[3]}
+                fig = go.Figure()
                 for menace in pivot.columns:
-                    ax.plot(pivot.index.astype(str), pivot[menace], marker="o", markersize=3,
-                            label=menace, color=colors_map.get(menace, TEAL))
-                ax.set_ylabel("Nombre d'alertes")
-                ax.legend(fontsize=8, loc="upper left")
-                plt.xticks(rotation=30, ha="right", fontsize=8)
-                style_dark_fig(fig, ax)
-                fig.tight_layout()
-                st.pyplot(fig)
-                plt.close(fig)
+                    fig.add_trace(go.Scatter(
+                        x=pivot.index.astype(str), y=pivot[menace], mode="lines+markers", name=menace,
+                        line=dict(color=colors_map.get(menace, TEAL), width=2), marker=dict(size=6),
+                    ))
+                fig.update_yaxes(title="Nombre d'alertes")
+                plotly_dark_layout(fig, height=380)
+                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
         else:
             st.info("Aucune alerte enregistree pour l'instant.")
 
@@ -1357,15 +1368,14 @@ def render_academic_view():
         if (OUT_DIR / "optimized_results.csv").exists():
             df_opt = pd.read_csv(OUT_DIR / "optimized_results.csv")
             st.dataframe(df_opt, use_container_width=True, hide_index=True)
-            fig, ax = plt.subplots(figsize=(6, 4))
-            ax.bar(df_opt["Modele"].str.replace("_optimise", ""), df_opt["Exactitude"], color=TEAL)
-            ax.set_ylabel("Exactitude")
-            ax.set_ylim(0.9, 1.0)
-            plt.xticks(rotation=30, ha="right", fontsize=8)
-            style_dark_fig(fig, ax)
-            fig.tight_layout()
-            st.pyplot(fig)
-            plt.close(fig)
+            fig = go.Figure(data=[go.Bar(
+                x=df_opt["Modele"].str.replace("_optimise", ""), y=df_opt["Exactitude"],
+                marker_color=TEAL, text=(df_opt["Exactitude"] * 100).round(2).astype(str) + "%",
+                textposition="outside", textfont=dict(color=TEXT_LIGHT, size=10),
+            )])
+            fig.update_yaxes(title="Exactitude", range=[0.9, 1.0])
+            plotly_dark_layout(fig, height=340)
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
             with st.expander("📖 Pourquoi comparer 5 algorithmes plutot que d'en choisir un directement ?"):
                 st.markdown(
                     "Chaque famille d'algorithme a des forces differentes : la Regression Logistique est "
@@ -1509,14 +1519,13 @@ def render_academic_view():
                 c1, c2 = st.columns(2)
                 c1.markdown(kpi_card("📊", "Moyenne", f"{df_case[col_choisie].mean():.2f}", level="neutral"), unsafe_allow_html=True)
                 c2.markdown(kpi_card("📐", "Ecart-type", f"{df_case[col_choisie].std():.2f}", level="neutral"), unsafe_allow_html=True)
-                fig, ax = plt.subplots(figsize=(8, 3.5))
-                ax.hist(df_case[col_choisie].dropna(), bins=30, color=TEAL)
-                ax.set_xlabel(col_choisie)
-                ax.set_ylabel("Frequence")
-                style_dark_fig(fig, ax)
-                fig.tight_layout()
-                st.pyplot(fig)
-                plt.close(fig)
+                fig = go.Figure(data=[go.Histogram(
+                    x=df_case[col_choisie].dropna(), nbinsx=30, marker_color=TEAL,
+                )])
+                fig.update_xaxes(title=col_choisie)
+                fig.update_yaxes(title="Frequence")
+                plotly_dark_layout(fig, height=340)
+                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("Aucune colonne numerique detectee dans ce fichier.")
 
