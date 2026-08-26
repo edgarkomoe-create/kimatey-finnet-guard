@@ -57,6 +57,21 @@ class ModelService:
         probas = self.model.predict_proba(X)
         return preds, probas
 
+    def predict_with_threshold(self, df_raw: pd.DataFrame, threshold: float = 0.5):
+        """Applique un seuil de sensibilite personnalise au lieu de l'argmax brut
+        (voir core/sensitivity.py). threshold = confiance minimale requise en
+        P(Normal) pour classer un flux comme normal ; en-dessous, le flux est
+        classe selon la classe de menace la plus probable parmi les 3 restantes.
+        threshold=0.5 reproduit le comportement standard de predict()."""
+        X = self.preprocess(df_raw)
+        probas = self.model.predict_proba(X)
+        p_normal = probas[:, 0]
+        # Classe de menace la plus probable parmi les colonnes 1,2,3 (jamais 0)
+        threat_argmax = probas[:, 1:].argmax(axis=1) + 1
+        preds = pd.Series(0, index=range(len(probas)))
+        preds[p_normal < threshold] = threat_argmax[p_normal < threshold]
+        return preds.to_numpy(), probas
+
     def format_prediction(self, pred_class: int, proba_row) -> dict:
         confidence = float(proba_row.max() * 100)
         probabilities = {

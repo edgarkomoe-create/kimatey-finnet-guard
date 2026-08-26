@@ -35,12 +35,15 @@ from api.schemas import (
     ExplainFlowRequest, ExplainBatchRequest, ExplainResponse,
     PublicProgressIn, PublicProgressOut, TendancesResponse,
     TransactionIn, TransactionPredictionResponse, TransactionBatchSummary,
-    PassInfo, ActivePassResponse, SouscrirePassRequest,
+    PassInfo, ActivePassResponse, SouscrirePassRequest, SensitivityResponse, SetSensitivityRequest,
+    EnrichedModelStatus,
 )
 from api.transaction_model_service import get_transaction_model_service
 from core.pass_system import (
     get_catalog, get_active_pass, souscrire as pass_souscrire, check_and_increment_quota,
 )
+from core.sensitivity import get_threshold, set_threshold, DEFAULT_THRESHOLD
+from core.enriched_model import generate_enriched_model, get_enriched_model_status
 from api.model_service import get_model_service, CLASS_NAMES
 from api.auth import (
     require_org_auth, create_token, verify_shared_password, verify_org_credentials,
@@ -144,13 +147,14 @@ def model_info():
 @app.post(
     "/predict", response_model=PredictionResponse, tags=["Prediction"],
     summary="Predire la classe de menace d'un flux reseau unique",
-    dependencies=[Depends(require_org_auth)],
+    dependencies=[],
 )
-def predict(flow: NetworkFlow):
+def predict(flow: NetworkFlow, user=Depends(require_org_auth)):
     service = get_model_service()
     df = pd.DataFrame([flow.model_dump()])
+    threshold = get_threshold("reseau", user["org_id"]) if user else DEFAULT_THRESHOLD
     try:
-        preds, probas = service.predict(df)
+        preds, probas = service.predict_with_threshold(df, threshold=threshold)
     except Exception as exc:
         logger.exception("Erreur de prediction")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
@@ -160,14 +164,15 @@ def predict(flow: NetworkFlow):
 @app.post(
     "/predict_batch", response_model=BatchPredictionResponse, tags=["Prediction"],
     summary="Predire la classe de menace pour une liste de flux reseau (JSON)",
-    dependencies=[Depends(require_org_auth)],
+    dependencies=[],
 )
-def predict_batch(request: BatchPredictionRequest):
+def predict_batch(request: BatchPredictionRequest, user=Depends(require_org_auth)):
     if not request.flows:
         raise HTTPException(status_code=400, detail="La liste 'flows' ne peut pas etre vide.")
     service = get_model_service()
     df = pd.DataFrame([f.model_dump() for f in request.flows])
-    preds, probas = service.predict(df)
+    threshold = get_threshold("reseau", user["org_id"]) if user else DEFAULT_THRESHOLD
+    preds, probas = service.predict_with_threshold(df, threshold=threshold)
     predictions = [
         PredictionResponse(**service.format_prediction(p, probas[i])) for i, p in enumerate(preds)
     ]
@@ -187,9 +192,9 @@ def predict_batch(request: BatchPredictionRequest):
 @app.post(
     "/predict_csv", tags=["Prediction"],
     summary="Predire la classe de menace pour un fichier CSV de logs reseau",
-    dependencies=[Depends(require_org_auth)],
+    dependencies=[],
 )
-async def predict_csv(file: UploadFile = File(..., description="CSV contenant les 9 variables reseau")):
+async def predict_csv(file: UploadFile = File(..., description="CSV contenant les 9 variables reseau"), user=Depends(require_org_auth)):
     if not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="Seuls les fichiers .csv sont acceptes.")
     content = await file.read()
@@ -201,8 +206,9 @@ async def predict_csv(file: UploadFile = File(..., description="CSV contenant le
         raise HTTPException(status_code=400, detail="Le fichier CSV est vide.")
 
     service = get_model_service()
+    threshold = get_threshold("reseau", user["org_id"]) if user else DEFAULT_THRESHOLD
     try:
-        preds, probas = service.predict(df)
+        preds, probas = service.predict_with_threshold(df, threshold=threshold)
     except Exception as exc:
         logger.exception("Erreur de prediction batch CSV")
         raise HTTPException(status_code=500, detail=str(exc))
@@ -684,3 +690,63 @@ def pass_souscrire_endpoint(scope: str, account_id: str, payload: SouscrirePassR
         pass_id=entry["pass_id"], nom=active["definition"]["nom"], usage=entry["usage"],
         quotas=active["definition"]["quotas"], expire_le=entry.get("expire_le"),
     )
+
+
+# ==================================================================
+# Reglage de sensibilite (seuil de decision, sans reentrainement)
+# ==================================================================
+@app.get(
+    "/sensibilite", response_model=SensitivityResponse, tags=["Organisation"],
+    summary="Seuil de sensibilite actuel du compte connecte (domaine 'reseau' ou 'transactions')",
+)
+def get_sensibilite(domain: str, user=Depends(require_org_auth)):
+    if domain not in ("reseau", "transactions"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="domain doit etre 'reseau' ou 'transactions'")
+    account_id = user["org_id"] if user else "anonyme"
+    threshold = get_threshold(domain, account_id)
+    return SensitivityResponse(domain=domain, threshold=threshold, is_default=(threshold == DEFAULT_THRESHOLD))
+
+
+@app.post(
+    "/sensibilite", response_model=SensitivityResponse, tags=["Organisation"],
+    summary="Ajuste le seuil de sensibilite du compte connecte (0-1, 0.5 = standard)",
+    dependencies=[Depends(require_org_auth)],
+)
+def set_sensibilite(domain: str, payload: SetSensitivityRequest, user=Depends(require_org_auth)):
+    if domain not in ("reseau", "transactions"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="domain doit etre 'reseau' ou 'transactions'")
+    account_id = user["org_id"] if user else "anonyme"
+    try:
+        threshold = set_threshold(domain, account_id, payload.threshold)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return SensitivityResponse(domain=domain, threshold=threshold, is_default=(threshold == DEFAULT_THRESHOLD))
+
+
+# ==================================================================
+# Modele hybride, Niveau 2 : modele enrichi par organisation
+# (voir core/enriched_model.py pour le detail de la methodologie et des
+# garde-fous - jamais automatique, toujours declenche explicitement)
+# ==================================================================
+@app.get(
+    "/organisation/modele_enrichi", response_model=EnrichedModelStatus, tags=["Organisation"],
+    summary="Statut du modele enrichi pour l'organisation connectee (existe ? combien d'echantillons ?)",
+    dependencies=[Depends(require_org_auth)],
+)
+def modele_enrichi_status(user=Depends(require_org_auth)):
+    account_id = user["org_id"] if user else "anonyme"
+    return get_enriched_model_status(account_id)
+
+
+@app.post(
+    "/organisation/modele_enrichi/generer", response_model=EnrichedModelStatus, tags=["Organisation"],
+    summary="Genere (ou regenere) le modele enrichi pour l'organisation connectee, a partir de ses echantillons valides",
+    dependencies=[Depends(require_org_auth)],
+)
+def modele_enrichi_generer(user=Depends(require_org_auth)):
+    account_id = user["org_id"] if user else "anonyme"
+    try:
+        generate_enriched_model(account_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return get_enriched_model_status(account_id)

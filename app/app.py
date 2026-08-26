@@ -47,6 +47,8 @@ from core.kimatey_core import (
 # entre "qui peut se connecter sur l'API" et "qui peut se connecter dans l'appli".
 from api.auth import register_user, verify_user_credentials, create_token, EmailDejaUtilise
 from api.transaction_model_service import get_transaction_model_service
+from core.sensitivity import get_threshold, set_threshold
+from core.enriched_model import get_enriched_model_status, generate_enriched_model
 
 OUT_DIR = BASE_DIR / "outputs"
 MODEL_DIR = OUT_DIR / "models"
@@ -667,6 +669,54 @@ def render_organisation_view():
                      'aussi fiable, tout en etant plus simple a auditer pour un analyste.</p>', unsafe_allow_html=True)
         if (OUT_DIR / "comparison_step3.csv").exists():
             st.dataframe(pd.read_csv(OUT_DIR / "comparison_step3.csv"), use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+        st.subheader("🎛️ Personnalisation du modele (modele hybride)")
+        st.caption(
+            "Deux niveaux de personnalisation, sans jamais toucher au modele partage par les "
+            "autres organisations : un reglage immediat (seuil de sensibilite), et un "
+            "enrichissement optionnel a partir de vos propres donnees validees."
+        )
+
+        account_id = st.session_state.get("auth_email", "anonyme")
+
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("**Seuil de sensibilite**")
+            st.caption("Plus haut = detecte plus (plus de fausses alertes). Plus bas = moins d'alertes "
+                       "(risque de rater des menaces subtiles). 0.5 = comportement standard.")
+            current_threshold = get_threshold("reseau", account_id)
+            new_threshold = st.slider("Seuil", min_value=0.05, max_value=0.95, value=float(current_threshold),
+                                       step=0.05, key="sensitivity_slider")
+            if st.button("Appliquer ce seuil"):
+                set_threshold("reseau", account_id, new_threshold)
+                st.success(f"Seuil de sensibilite mis a jour : {new_threshold}")
+                st.rerun()
+
+        with c2:
+            st.markdown("**Modele enrichi pour votre organisation**")
+            enriched_status = get_enriched_model_status(account_id)
+            n_avail = enriched_status["n_org_samples_available"]
+            n_required = enriched_status["min_required"]
+            st.caption(f"Echantillons valides disponibles : {n_avail} / {n_required} requis.")
+            st.progress(min(1.0, n_avail / n_required))
+
+            if enriched_status["exists"]:
+                st.write(
+                    f"Dernier modele enrichi genere le {enriched_status['generated_at'][:10]} : "
+                    f"exactitude {enriched_status['accuracy_enriched']*100:.1f}% "
+                    f"(reference socle commun : {enriched_status['accuracy_base_reference']*100:.1f}%)"
+                )
+            if n_avail >= n_required:
+                if st.button("🔧 Generer / regenerer mon modele enrichi"):
+                    try:
+                        generate_enriched_model(account_id)
+                        st.success("Modele enrichi genere avec succes.")
+                        st.rerun()
+                    except ValueError as e:
+                        st.error(str(e))
+            else:
+                st.info("Continuez a valider des predictions (base d'apprentissage progressive) pour debloquer cette option.")
 
     # ---------------------------------------------------------------- Tab 2 : Import CSV
     with tab_import:

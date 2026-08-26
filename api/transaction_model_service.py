@@ -48,6 +48,17 @@ class TransactionModelService:
         confidences = probas.max(axis=1) * 100
         return preds, confidences, probas
 
+    def predict_with_threshold(self, df_raw: pd.DataFrame, threshold: float = 0.5):
+        """threshold = probabilite minimale de fraude (classe 1) requise pour
+        classer une transaction comme suspecte. threshold=0.5 reproduit le
+        comportement standard de predict()."""
+        X = self.preprocess(df_raw)
+        probas = self.model.predict_proba(X)
+        p_fraude = probas[:, 1]
+        preds = (p_fraude >= threshold).astype(int)
+        confidences = probas.max(axis=1) * 100
+        return preds, confidences, probas
+
 
 @lru_cache(maxsize=1)
 def get_transaction_model_service() -> TransactionModelService:

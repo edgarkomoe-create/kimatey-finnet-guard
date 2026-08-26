@@ -217,6 +217,30 @@ class SouscrirePassRequest(BaseModel):
     pass_id: str = Field(..., description="Identifiant du Pass a souscrire (voir /pass/catalogue)")
 
 
+# ---------------------------------------------------------------- Reglage de sensibilite (seuil, sans reentrainement)
+class SensitivityResponse(BaseModel):
+    domain: str
+    threshold: float
+    is_default: bool
+
+
+class SetSensitivityRequest(BaseModel):
+    threshold: float = Field(..., gt=0.0, lt=1.0, description="Seuil de confiance (0-1 exclusif). 0.5 = comportement standard.")
+
+
+# ---------------------------------------------------------------- Modele enrichi par organisation (Niveau 2 du hybride)
+class EnrichedModelStatus(BaseModel):
+    exists: bool
+    n_org_samples_available: int
+    min_required: int
+    n_org_samples_used: Optional[int] = None
+    accuracy_enriched: Optional[float] = None
+    f1_macro_enriched: Optional[float] = None
+    accuracy_base_reference: Optional[float] = None
+    f1_macro_base_reference: Optional[float] = None
+    generated_at: Optional[str] = None
+
+
 # ---------------------------------------------------------------- Sensibilisation ludique (fusion gamification)
 class GameScenarioOut(BaseModel):
     situation: str
