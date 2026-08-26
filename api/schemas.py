@@ -185,6 +185,14 @@ class TransactionPredictionResponse(BaseModel):
     avertissement: str = "Modele prototype entraine sur des donnees SYNTHETIQUES - non valide sur de vraies transactions."
 
 
+class TransactionBatchSummary(BaseModel):
+    n_total: int
+    n_suspectes: int
+    taux_suspect: float
+    is_prototype: bool = True
+    avertissement: str = "Modele prototype entraine sur des donnees SYNTHETIQUES - non valide sur de vraies transactions."
+
+
 # ---------------------------------------------------------------- Sensibilisation ludique (fusion gamification)
 class GameScenarioOut(BaseModel):
     situation: str

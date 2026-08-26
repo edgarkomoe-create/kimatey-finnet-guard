@@ -34,7 +34,7 @@ from api.schemas import (
     TemoignagesCountResponse, GameCategoryOut, GameMetaOut,
     ExplainFlowRequest, ExplainBatchRequest, ExplainResponse,
     PublicProgressIn, PublicProgressOut, TendancesResponse,
-    TransactionIn, TransactionPredictionResponse,
+    TransactionIn, TransactionPredictionResponse, TransactionBatchSummary,
 )
 from api.transaction_model_service import get_transaction_model_service
 from api.model_service import get_model_service, CLASS_NAMES
@@ -602,4 +602,21 @@ def predict_transaction(payload: TransactionIn):
     return TransactionPredictionResponse(
         prediction=TX_CLASS_NAMES[int(preds[0])],
         confidence=round(float(confs[0]), 1),
+    )
+
+
+@app.post(
+    "/predict_transaction_csv", response_model=TransactionBatchSummary, tags=["Organisation"],
+    summary="[PROTOTYPE] Evalue un lot de transactions mobile money via un fichier CSV",
+    dependencies=[Depends(require_org_auth)],
+)
+async def predict_transaction_csv(file: UploadFile = File(..., description="CSV de transactions (colonnes du schema transactionnel)")):
+    service = get_transaction_model_service()
+    df = pd.read_csv(file.file)
+    preds, confs, probas = service.predict(df)
+    n_suspect = int((preds != 0).sum())
+    return TransactionBatchSummary(
+        n_total=len(df),
+        n_suspectes=n_suspect,
+        taux_suspect=round(n_suspect / len(df) * 100, 1) if len(df) > 0 else 0.0,
     )

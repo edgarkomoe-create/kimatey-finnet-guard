@@ -50,6 +50,7 @@ from api.transaction_model_service import get_transaction_model_service
 
 OUT_DIR = BASE_DIR / "outputs"
 MODEL_DIR = OUT_DIR / "models"
+OUT_DIR_TX = OUT_DIR / "transaction_fraud"
 DATA_DIR = BASE_DIR / "data"
 
 FEATURES = joblib.load(MODEL_DIR / "feature_names.joblib")
@@ -1139,6 +1140,58 @@ def render_organisation_view():
             k2.markdown(kpi_card("⚖️", "F1-score", f"{tx_info['f1_score']*100:.1f}%", level="neutral"), unsafe_allow_html=True)
             k3.markdown(kpi_card("📈", "AUC", f"{tx_info['auc']*100:.1f}%", level="neutral"), unsafe_allow_html=True)
 
+            st.markdown("---")
+            st.subheader("Analyser un fichier de transactions (lot)")
+            with st.expander("Colonnes techniques attendues dans le fichier"):
+                st.write("Les colonnes manquantes seront remplacees par la valeur mediane observee a l'entrainement "
+                         "(memes limites connues que le modele reseau - voir README).")
+                st.code(", ".join(tx_service.features))
+
+            demo_tx_path = OUT_DIR_TX / "transactions_synthetiques.csv"
+            if demo_tx_path.exists():
+                st.download_button(
+                    "📎 Telecharger un exemple de fichier synthetique",
+                    demo_tx_path.read_bytes(), "exemple_transactions_synthetiques.csv", "text/csv",
+                )
+
+            uploaded_tx = st.file_uploader("Choisir un fichier CSV de transactions", type=["csv"], key="tx_csv_uploader")
+            if uploaded_tx is not None:
+                df_tx_batch = pd.read_csv(uploaded_tx)
+                st.write(f"**{len(df_tx_batch)} transactions chargees.**")
+                st.dataframe(df_tx_batch.head(10), use_container_width=True)
+
+                if st.button("Lancer l'analyse du lot", type="primary", key="tx_batch_analyze"):
+                    preds, confs, probas = tx_service.predict(df_tx_batch)
+                    from api.transaction_model_service import CLASS_NAMES as TX_CLASS_NAMES
+                    df_tx_results = df_tx_batch.copy()
+                    df_tx_results["Prediction"] = [TX_CLASS_NAMES[p] for p in preds]
+                    df_tx_results["Confiance (%)"] = confs.round(1)
+
+                    n_suspect = int((preds != 0).sum())
+                    rate_tx = n_suspect / len(df_tx_batch) * 100
+
+                    st.session_state.last_tx_batch = {
+                        "n_total": len(df_tx_batch), "n_suspect": n_suspect, "rate": rate_tx,
+                        "df_results": df_tx_results,
+                    }
+
+            if "last_tx_batch" in st.session_state:
+                tx_data = st.session_state.last_tx_batch
+                lvl_tx = threat_level(tx_data["rate"])
+                colA, colB, colC = st.columns(3)
+                colA.markdown(kpi_card("📡", "Transactions verifiees", tx_data["n_total"], level="neutral"), unsafe_allow_html=True)
+                colB.markdown(kpi_card("🚨", "Transactions suspectes", tx_data["n_suspect"], level=lvl_tx), unsafe_allow_html=True)
+                colC.markdown(kpi_card("📊", "Part suspecte", f"{tx_data['rate']:.1f}%", level=lvl_tx), unsafe_allow_html=True)
+
+                st.markdown("**Detail des transactions (top 200 affiches)**")
+                st.dataframe(tx_data["df_results"].head(200), use_container_width=True)
+                csv_tx_out = tx_data["df_results"].to_csv(index=False).encode("utf-8")
+                st.download_button("Telecharger les resultats (CSV)", csv_tx_out, "resultats_transactions.csv", "text/csv")
+                st.caption("⚠️ Rappel : evaluation par un modele prototype sur donnees synthetiques - "
+                           "ne pas utiliser pour de vraies decisions.")
+
+            st.markdown("---")
+            st.subheader("Evaluer une transaction unique (formulaire)")
             with st.form("transaction_form"):
                 c1, c2 = st.columns(2)
                 with c1:
