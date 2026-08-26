@@ -78,6 +78,7 @@
     <div id="game-header-container"></div>
     <div id="category-tabs-container"></div>
     <div id="mascot-container"></div>
+    <div id="lecon-container"></div>
     <div id="quiz-container"></div>
     <div id="badges-container"></div>
     <div id="certificate-cta-container"></div>
@@ -322,7 +323,7 @@ function loadGameState() {
     const raw = localStorage.getItem(GAME_STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch (e) { /* localStorage indisponible (navigation privee, etc.) : on repart a zero */ }
-  return { xp: 0, hearts: 3, category: null, quizIndex: {}, badgesSeen: [], quizSelected: null, quizAnswered: false };
+  return { xp: 0, hearts: 3, category: null, quizIndex: {}, badgesSeen: [], quizSelected: null, quizAnswered: false, leconsVues: {}, leconSlideIndex: 0 };
 }
 
 function saveGameState() {
@@ -383,6 +384,7 @@ function renderCategoryTabs() {
       gameState.category = btn.dataset.cat;
       gameState.quizSelected = null;
       gameState.quizAnswered = false;
+      gameState.leconSlideIndex = 0;
       saveGameState();
       renderAll();
     });
@@ -405,9 +407,72 @@ function renderMascot() {
   el.innerHTML = html;
 }
 
+// ==========================================================================
+// Mini-lecon visuelle (icones + phrases courtes) avant le quiz de chaque
+// categorie - reduit la barrière de lecture pour un public a faible
+// litteratie numerique. Affichee automatiquement la premiere fois qu'une
+// categorie est ouverte ; toujours revisitable via "Revoir la lecon".
+// ==========================================================================
+function renderLecon() {
+  const el = document.getElementById("lecon-container");
+  const cat = currentCategory();
+  if (!cat || !cat.lecon || cat.lecon.length === 0) { el.innerHTML = ""; return; }
+
+  const alreadySeen = gameState.leconsVues[cat.key];
+
+  if (alreadySeen) {
+    el.innerHTML = '<button class="btn secondary lecon-revoir-btn" id="lecon-revoir">' + t("lecon_revoir") + '</button>';
+    document.getElementById("lecon-revoir").addEventListener("click", () => {
+      gameState.leconSlideIndex = 0;
+      gameState.leconsVues[cat.key] = false;
+      renderLecon();
+    });
+    return;
+  }
+
+  const idx = Math.min(gameState.leconSlideIndex, cat.lecon.length - 1);
+  const slide = cat.lecon[idx];
+  const isLast = idx === cat.lecon.length - 1;
+
+  let html = '<div class="lecon-card">';
+  html += '<div class="lecon-progress">';
+  cat.lecon.forEach((_, i) => {
+    html += '<span class="lecon-dot' + (i === idx ? ' active' : '') + '"></span>';
+  });
+  html += '</div>';
+  html += '<div class="lecon-icon" key="' + idx + '">' + slide.icone + '</div>';
+  html += '<p class="lecon-text">' + slide.texte + '</p>';
+  html += '<div class="lecon-nav">';
+  if (idx > 0) html += '<button class="btn secondary" id="lecon-prev">' + t("lecon_precedent") + '</button>';
+  if (!isLast) {
+    html += '<button class="btn" id="lecon-next">' + t("lecon_suivant") + '</button>';
+  } else {
+    html += '<button class="btn" id="lecon-start-quiz">' + t("lecon_commencer_quiz") + '</button>';
+  }
+  html += '</div></div>';
+
+  el.innerHTML = html;
+
+  const prevBtn = document.getElementById("lecon-prev");
+  if (prevBtn) prevBtn.addEventListener("click", () => { gameState.leconSlideIndex = idx - 1; renderLecon(); });
+  const nextBtn = document.getElementById("lecon-next");
+  if (nextBtn) nextBtn.addEventListener("click", () => { gameState.leconSlideIndex = idx + 1; renderLecon(); });
+  const startBtn = document.getElementById("lecon-start-quiz");
+  if (startBtn) startBtn.addEventListener("click", () => {
+    gameState.leconsVues[cat.key] = true;
+    gameState.leconSlideIndex = 0;
+    saveGameState();
+    renderLecon();
+  });
+}
+
 function renderQuiz() {
   const el = document.getElementById("quiz-container");
   const cat = currentCategory();
+  if (cat && cat.lecon && cat.lecon.length > 0 && !gameState.leconsVues[cat.key]) {
+    el.innerHTML = ""; // le quiz reste cache tant que la mini-lecon n'a pas ete parcourue
+    return;
+  }
   if (!cat || !cat.scenarios.length) {
     el.innerHTML = '<p class="hint">' + t("quiz_loading") + '</p>';
     return;
@@ -497,6 +562,7 @@ function renderAll() {
   renderGameHeader();
   renderCategoryTabs();
   renderMascot();
+  renderLecon();
   renderQuiz();
   renderBadges();
   renderCertificateCTA();

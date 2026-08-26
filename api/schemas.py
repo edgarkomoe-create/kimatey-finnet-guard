@@ -250,6 +250,11 @@ class GameScenarioOut(BaseModel):
     tip: Optional[str] = None
 
 
+class LeconSlideOut(BaseModel):
+    icone: str = Field(..., description="Emoji/icone representant visuellement le concept")
+    texte: str = Field(..., description="Phrase courte (accessible, peu de mots) accompagnant l'icone")
+
+
 class GameCategoryOut(BaseModel):
     key: str
     label: str
@@ -258,6 +263,7 @@ class GameCategoryOut(BaseModel):
     mascot_name: str
     mascot_intro: str
     scenarios: List[GameScenarioOut]
+    lecon: List[LeconSlideOut] = Field(default_factory=list, description="Mini-lecon visuelle (icones + phrases courtes) avant le quiz")
 
 
 class LevelOut(BaseModel):

@@ -90,6 +90,10 @@ const I18N = {
     game_h3: "🧠 Jeu de vigilance : sauriez-vous repérer le piège ?",
     game_note: "Mécanique de gamification (niveaux, Points Bouclier, vies, catégories thématiques) adaptée à la fraude mobile money, avec Lieutenant Cyber (l'IA propre à Kimatey FinNet Guard, une création originale) comme guide. Les Points Bouclier n'ont aucune valeur monétaire ni conversion en argent réel : un indicateur de progression et de vigilance, point. Aucun compte n'est requis pour jouer : votre progression est mémorisée automatiquement dans ce navigateur. Un compte reste possible, mais entièrement optionnel, uniquement si vous voulez synchroniser votre progression entre plusieurs appareils (voir ci-dessous).",
     game_lang_note: "🌍 Les scénarios du quiz et les échanges avec Lieutenant Cyber restent en français pour le moment, quelle que soit la langue choisie ici.",
+    lecon_revoir: "📖 Revoir la mini-leçon",
+    lecon_precedent: "← Précédent",
+    lecon_suivant: "Suivant →",
+    lecon_commencer_quiz: "🎯 Commencer le quiz",
     report_h3: "🤝 Racontez à Lieutenant Cyber ce qui vous est arrivé",
     report_hint: "Pas de formulaire à remplir : discutez-en comme vous le feriez avec un ami. Aucune information personnelle n'est demandée - seule la technique utilisée par l'escroc nous intéresse.",
 
@@ -251,6 +255,10 @@ const I18N = {
     game_h3: "🧠 Vigilance game: could you spot the trap?",
     game_note: "Gamification mechanics (levels, Shield Points, lives, themed categories) adapted to mobile money fraud, with Lieutenant Cyber (Kimatey FinNet Guard's own AI, an original creation) as guide. Shield Points have no monetary value and cannot be converted to real money: a progress and vigilance indicator, nothing more. No account is required to play: your progress is saved automatically in this browser. An account remains possible, but entirely optional, only if you want to sync your progress across multiple devices (see below).",
     game_lang_note: "🌍 Quiz scenarios and exchanges with Lieutenant Cyber remain in French for now, regardless of the language selected here.",
+    lecon_revoir: "📖 Review the mini-lesson",
+    lecon_precedent: "← Previous",
+    lecon_suivant: "Next →",
+    lecon_commencer_quiz: "🎯 Start the quiz",
     report_h3: "🤝 Tell Lieutenant Cyber what happened to you",
     report_hint: "No form to fill out: chat about it like you would with a friend. No personal information is requested - only the scammer's technique matters to us.",
 

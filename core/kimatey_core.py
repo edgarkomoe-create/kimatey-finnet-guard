@@ -250,6 +250,12 @@ GAME_CATEGORIES = [
         "mascot_key": "lieutenant_cyber",
         "mascot_line": "🎖️ Lieutenant Cyber au rapport ! Aujourd'hui, on inspecte les pieges du mobile "
                        "money - pret(e) a tester tes reflexes ?",
+        "lecon": [
+            {"icone": "📵", "texte": "Personne d'officiel ne vous demande votre code secret."},
+            {"icone": "⏳", "texte": "L'urgence est une arme des arnaqueurs. Prenez toujours le temps de verifier."},
+            {"icone": "📞", "texte": "Un doute ? Rappelez vous-meme le numero officiel, jamais celui recu par SMS."},
+            {"icone": "🚫💸", "texte": "Jamais d'argent envoye a un inconnu, meme s'il dit etre urgent ou important."},
+        ],
         "scenarios": SCENARIOS,
     },
     {
@@ -259,6 +265,12 @@ GAME_CATEGORIES = [
         "mascot_key": "lieutenant_cyber",
         "mascot_line": "🎖️ Lieutenant Cyber : les arnaques bancaires sont parmi les plus sophistiquees. "
                        "Restons vigilants ensemble.",
+        "lecon": [
+            {"icone": "🏦❌", "texte": "Votre banque ne bloque jamais un compte par simple SMS avec un lien."},
+            {"icone": "🔗🚫", "texte": "Ne cliquez jamais sur un lien recu par SMS ou email pour votre banque."},
+            {"icone": "🎁⚠️", "texte": "Un pret trop facile, trop rapide, sans garantie : c'est suspect."},
+            {"icone": "✍️", "texte": "Verifiez toujours en tapant vous-meme l'adresse officielle de votre banque."},
+        ],
         "scenarios": [
             {
                 "situation": "Vous recevez un SMS : « Votre compte bancaire sera suspendu dans 24h. "
@@ -291,6 +303,12 @@ GAME_CATEGORIES = [
         "mascot_key": "lieutenant_cyber",
         "mascot_line": "🎖️ Lieutenant Cyber : ici, ce n'est pas votre ecran qui est attaque, c'est votre "
                        "confiance. Apprenons a la proteger.",
+        "lecon": [
+            {"icone": "🎭", "texte": "L'arnaqueur se fait passer pour quelqu'un de confiance (technicien, employeur, ami)."},
+            {"icone": "📲🚫", "texte": "N'installez jamais une application demandee par un appel non sollicite."},
+            {"icone": "👨‍👩‍👧", "texte": "Un doute sur un proche ? Rappelez-le directement, sur son vrai numero."},
+            {"icone": "🛑", "texte": "Raccrocher n'est jamais impoli face a une demande suspecte."},
+        ],
         "scenarios": [
             {
                 "situation": "Un appel : « Bonjour, support technique de votre operateur, votre telephone "
@@ -325,6 +343,12 @@ GAME_CATEGORIES = [
         "mascot_key": "lieutenant_cyber",
         "mascot_line": "🎖️ Lieutenant Cyber : en ligne, tout le monde n'est pas qui il pretend etre. "
                        "Gardons un oeil vigilant.",
+        "lecon": [
+            {"icone": "👤❓", "texte": "Un profil peut etre faux, meme avec une jolie photo."},
+            {"icone": "💰➡️🚫", "texte": "N'envoyez jamais d'argent avant de recevoir un article achete en ligne."},
+            {"icone": "🏆❌", "texte": "Vous n'avez pas gagne un concours auquel vous n'avez jamais participe."},
+            {"icone": "🔒", "texte": "Vos codes et mots de passe ne se partagent avec personne, jamais."},
+        ],
         "scenarios": [
             {
                 "situation": "Sur une page de vente en ligne, un acheteur insiste : « Envoie-moi d'abord "
@@ -359,6 +383,12 @@ GAME_CATEGORIES = [
         "mascot_key": "lieutenant_cyber",
         "mascot_line": "🎖️ Lieutenant Cyber : les fraudeurs ciblent souvent nos aines. Protegeons-les "
                        "ensemble, un reflexe a la fois.",
+        "lecon": [
+            {"icone": "👨‍👩‍👧‍👦", "texte": "Un vrai proche en difficulte accepte toujours d'etre rappele avant l'envoi d'argent."},
+            {"icone": "🚔❌", "texte": "La police ne demande jamais d'argent par telephone."},
+            {"icone": "🤝", "texte": "Parlez-en a une personne de confiance avant toute decision urgente."},
+            {"icone": "🙅", "texte": "Il est toujours correct de dire non et de raccrocher."},
+        ],
         "scenarios": [
             {
                 "situation": "Un appel : « Grand-pere/Grand-mere, c'est moi, j'ai eu un accident, envoie "
@@ -394,6 +424,12 @@ GAME_CATEGORIES = [
         "mascot_key": "lieutenant_cyber",
         "mascot_line": "🎖️ Lieutenant Cyber, en mission sur le front numerique : mots de passe, codes "
                        "et cartes SIM n'auront plus de secret pour vous.",
+        "lecon": [
+            {"icone": "🔢🚫", "texte": "Votre code PIN ou mot de passe ne se donne jamais, meme a un agent."},
+            {"icone": "📱⚠️", "texte": "Perte soudaine de reseau ? Verifiez immediatement, ca peut etre un vol de SIM."},
+            {"icone": "🔑🔑", "texte": "Un mot de passe different pour chaque compte important protege mieux."},
+            {"icone": "📩👀", "texte": "Un code recu par SMS que vous n'avez pas demande : ne le partagez jamais."},
+        ],
         "scenarios": [
             {
                 "situation": "Un email « officiel » vous demande : « Confirmez votre mot de passe mobile "

@@ -106,6 +106,46 @@ body {
 #chat-mic { flex-shrink: 0; padding-left: .9rem; padding-right: .9rem; }
 #chat-mic.mic-active { background: var(--danger, #e5484d); color: #fff; animation: mic-pulse 1.2s ease-in-out infinite; }
 @keyframes mic-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+
+/* ---- Mini-lecon visuelle (e-learning accessible : icones + texte court) ---- */
+.lecon-card {
+  background: var(--navy-light, rgba(255,255,255,0.04));
+  border: 1px solid rgba(0,212,181,0.25);
+  border-radius: 16px;
+  padding: 1.8rem 1.4rem;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+.lecon-progress { display: flex; justify-content: center; gap: .4rem; margin-bottom: 1.2rem; }
+.lecon-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: background .3s, transform .3s; }
+.lecon-dot.active { background: var(--teal); transform: scale(1.3); }
+.lecon-icon {
+  font-size: 4rem;
+  line-height: 1;
+  margin-bottom: 1rem;
+  animation: lecon-pop .4s ease-out;
+}
+@keyframes lecon-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  70% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.lecon-text {
+  font-size: 1.15rem;
+  line-height: 1.5;
+  max-width: 26rem;
+  margin: 0 auto 1.4rem auto;
+  animation: lecon-fade-up .4s ease-out;
+}
+@keyframes lecon-fade-up {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.lecon-nav { display: flex; justify-content: center; gap: .7rem; }
+.lecon-revoir-btn { margin-bottom: 1rem; }
+@media (prefers-reduced-motion: reduce) {
+  .lecon-icon, .lecon-text { animation: none; }
+}
 .chat-input-row input[type=text] {
   flex: 1; padding: .65rem .8rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);
   background: var(--navy); color: var(--text-light); font-size: .92rem;
