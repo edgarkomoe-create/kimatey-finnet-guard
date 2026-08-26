@@ -61,6 +61,38 @@ with open(OUT_DIR / "best_model_info.json") as f:
     BEST_MODEL_INFO = json.load(f)
 SELECTED_FEATURES = BEST_MODEL_INFO["features_used"]
 
+# ------------------------------------------------------------------------
+# Detection adaptative de colonnes enrichies (optionnelles, hors schema ML) :
+# horodatage, pays, IP source, departement, appareil. Chaque institution
+# nomme ses colonnes differemment - on reconnait plusieurs alias courants
+# plutot que d'exiger un nom exact. AUCUNE colonne n'est jamais inventee ou
+# imputee : si une dimension est absente du fichier importe, la visualisation
+# correspondante indique honnetement "aucune donnee disponible" plutot que de
+# fabriquer une valeur. C'est le "Niveau 2 : couche de mapping de colonnes"
+# de la feuille de route "faire fonctionner le modele avec le fichier de
+# n'importe quelle institution", applique ici a l'enrichissement du dashboard
+# (pas aux 9 variables du modele ML, qui restent strictes).
+ENRICHMENT_ALIASES = {
+    "timestamp": ["Horodatage", "Timestamp", "Date", "DateTime", "Date_Heure"],
+    "pays": ["Pays", "Country", "Pays_Source", "Country_Source"],
+    "ip": ["IP_Source", "Source_IP", "IP", "Adresse_IP"],
+    "departement": ["Departement", "Department", "Service"],
+    "appareil": ["Appareil", "Device", "Type_Appareil"],
+}
+
+
+def detect_enrichment_columns(df):
+    """Retourne {dimension: nom_de_colonne_reel} pour chaque dimension enrichie
+    detectee dans df, en acceptant plusieurs alias courants par dimension."""
+    found = {}
+    cols_lower = {c.lower(): c for c in df.columns}
+    for dim, aliases in ENRICHMENT_ALIASES.items():
+        for alias in aliases:
+            if alias.lower() in cols_lower:
+                found[dim] = cols_lower[alias.lower()]
+                break
+    return found
+
 CLASS_NAMES = {0: "Normal / Legitime", 1: "Scan de Ports / Reconnaissance",
                2: "Attaque DDoS / Volumetrique", 3: "Infiltration / Brute-Force / Exfiltration"}
 CLASS_ICONS = {0: "🟢", 1: "🟠", 2: "🔴", 3: "🟣"}
@@ -646,19 +678,60 @@ def render_organisation_view():
             st.code(", ".join(FEATURES))
 
         uploaded = st.file_uploader("Choisir un fichier CSV", type=["csv"])
-        if uploaded is not None:
+        st.caption(
+            "Astuce : ajoutez des colonnes optionnelles Horodatage / Pays / Departement / Appareil "
+            "a votre export pour debloquer automatiquement des vues supplementaires ci-dessous "
+            "(chronologie, repartition geographique, filtres) - aucune n'est obligatoire."
+        )
+        demo_enrichi_path = OUT_DIR / "sample_logs_demo_enrichi.csv"
+        if demo_enrichi_path.exists() and uploaded is None:
+            if st.button("📎 Charger l'exemple enrichi (donnees synthetiques de demonstration)"):
+                st.session_state["_use_demo_enrichi"] = True
+                st.rerun()
+
+        if st.session_state.get("_use_demo_enrichi") and uploaded is None:
+            df_logs = pd.read_csv(demo_enrichi_path)
+            st.info(
+                "🧪 Exemple charge avec des colonnes Horodatage/Pays/Departement/Appareil "
+                "**synthetiques**, generees uniquement pour illustrer le rendu de ces vues - "
+                "ce ne sont pas de vraies donnees de production."
+            )
+        elif uploaded is not None:
+            st.session_state.pop("_use_demo_enrichi", None)
             df_logs = pd.read_csv(uploaded)
+        else:
+            df_logs = None
+
+        if df_logs is not None:
             st.write(f"**{len(df_logs)} connexions chargees.**")
             st.dataframe(df_logs.head(10), use_container_width=True)
 
+            enrichment = detect_enrichment_columns(df_logs)
+            if enrichment:
+                st.success("Colonnes enrichies detectees : " + ", ".join(
+                    f"{dim} ({col})" for dim, col in enrichment.items()
+                ))
+
+            # Filtres pre-analyse (uniquement si les dimensions correspondantes existent)
+            df_filtered = df_logs
+            filter_cols = st.columns(2)
+            if "departement" in enrichment:
+                options = sorted(df_logs[enrichment["departement"]].dropna().unique().tolist())
+                selected = filter_cols[0].multiselect("Filtrer par departement", options, default=options)
+                df_filtered = df_filtered[df_filtered[enrichment["departement"]].isin(selected)]
+            if "appareil" in enrichment:
+                options = sorted(df_logs[enrichment["appareil"]].dropna().unique().tolist())
+                selected = filter_cols[1].multiselect("Filtrer par appareil", options, default=options)
+                df_filtered = df_filtered[df_filtered[enrichment["appareil"]].isin(selected)]
+
             if st.button("Lancer l'analyse des flux", type="primary"):
-                preds, confs, probas = predict_with_confidence(df_logs)
-                df_results = df_logs.copy()
+                preds, confs, probas = predict_with_confidence(df_filtered)
+                df_results = df_filtered.copy()
                 df_results["Menace_Predite"] = [CLASS_NAMES[p] for p in preds]
                 df_results["Confiance (%)"] = confs.round(1)
 
                 n_threats = int((preds != 0).sum())
-                rate = n_threats / len(df_logs) * 100
+                rate = n_threats / len(df_filtered) * 100
                 dist = pd.Series(preds).map(CLASS_NAMES).value_counts()
 
                 # Resultat persiste en session_state (pas seulement local a ce bloc) : sinon, cliquer sur
@@ -667,8 +740,9 @@ def render_organisation_view():
                 # section disparaitrait - meme categorie de piste que le bug corrige sur la carte de
                 # progression du jeu de vigilance (voir plus haut / README).
                 st.session_state.last_batch_analysis = {
-                    "n_flows": len(df_logs), "n_threats": n_threats, "rate": rate,
+                    "n_flows": len(df_filtered), "n_threats": n_threats, "rate": rate,
                     "distribution": dist.to_dict(), "df_results": df_results,
+                    "enrichment": enrichment,
                 }
                 st.session_state.pop("lc_batch_explanation", None)
 
@@ -707,6 +781,56 @@ def render_organisation_view():
             fig.tight_layout()
             st.pyplot(fig)
             plt.close(fig)
+
+            # ---- Vues adaptatives : uniquement si les colonnes correspondantes ont ete detectees ----
+            enrichment = data.get("enrichment", {})
+            threats_only = df_results[df_results["Menace_Predite"] != CLASS_NAMES[0]]
+
+            ec1, ec2 = st.columns(2)
+            with ec1:
+                st.markdown("**Chronologie des menaces**")
+                if "timestamp" in enrichment and len(threats_only) > 0:
+                    ts_col = enrichment["timestamp"]
+                    try:
+                        dates = pd.to_datetime(threats_only[ts_col]).dt.date
+                        daily = dates.value_counts().sort_index()
+                        fig, ax = plt.subplots(figsize=(6, 3.5))
+                        ax.plot(daily.index.astype(str), daily.values, color=TEAL, marker="o", markersize=4)
+                        ax.set_ylabel("Menaces detectees")
+                        plt.xticks(rotation=30, ha="right", fontsize=8)
+                        style_dark_fig(fig, ax)
+                        fig.tight_layout()
+                        st.pyplot(fig)
+                        plt.close(fig)
+                    except (ValueError, TypeError):
+                        st.info("Colonne d'horodatage detectee mais format illisible - chronologie indisponible.")
+                else:
+                    st.info(
+                        "Aucune donnee d'horodatage disponible dans ce fichier. Ajoutez une colonne "
+                        "Horodatage/Timestamp/Date pour activer cette vue."
+                    )
+            with ec2:
+                st.markdown("**Repartition geographique des menaces**")
+                if "pays" in enrichment and len(threats_only) > 0:
+                    top_pays = threats_only[enrichment["pays"]].value_counts().head(8)
+                    fig, ax = plt.subplots(figsize=(6, 3.5))
+                    ax.barh(top_pays.index[::-1], top_pays.values[::-1], color=CLASS_COLORS[2])
+                    ax.set_xlabel("Menaces detectees")
+                    style_dark_fig(fig, ax)
+                    fig.tight_layout()
+                    st.pyplot(fig)
+                    plt.close(fig)
+                elif "ip" in enrichment:
+                    st.info(
+                        "Une colonne IP source est presente, mais la resolution geographique par IP "
+                        "(GeoIP) n'est pas encore branchee sur ce prototype - ajoutez directement une "
+                        "colonne Pays pour activer cette vue des maintenant."
+                    )
+                else:
+                    st.info(
+                        "Aucune donnee geographique disponible dans ce fichier. Ajoutez une colonne "
+                        "Pays/Country pour activer cette vue."
+                    )
 
             st.markdown("**Detail des flux (top 200 affiches)**")
             st.dataframe(df_results.head(200), use_container_width=True)
