@@ -34,7 +34,9 @@ from api.schemas import (
     TemoignagesCountResponse, GameCategoryOut, GameMetaOut,
     ExplainFlowRequest, ExplainBatchRequest, ExplainResponse,
     PublicProgressIn, PublicProgressOut, TendancesResponse,
+    TransactionIn, TransactionPredictionResponse,
 )
+from api.transaction_model_service import get_transaction_model_service
 from api.model_service import get_model_service, CLASS_NAMES
 from api.auth import (
     require_org_auth, create_token, verify_shared_password, verify_org_credentials,
@@ -582,3 +584,22 @@ def get_public_progress(user=Depends(require_org_auth)):
     if not entry:
         return PublicProgressOut(state=None, updated_at=None)
     return PublicProgressOut(state=entry["state"], updated_at=entry["updated_at"])
+
+
+# ==================================================================
+# Fraude transactionnelle (PROTOTYPE - modele entraine sur donnees SYNTHETIQUES)
+# ==================================================================
+@app.post(
+    "/predict_transaction", response_model=TransactionPredictionResponse, tags=["Organisation"],
+    summary="[PROTOTYPE] Evalue une transaction mobile money (modele entraine sur donnees synthetiques)",
+    dependencies=[Depends(require_org_auth)],
+)
+def predict_transaction(payload: TransactionIn):
+    service = get_transaction_model_service()
+    df = pd.DataFrame([payload.model_dump()])
+    preds, confs, probas = service.predict(df)
+    from api.transaction_model_service import CLASS_NAMES as TX_CLASS_NAMES
+    return TransactionPredictionResponse(
+        prediction=TX_CLASS_NAMES[int(preds[0])],
+        confidence=round(float(confs[0]), 1),
+    )

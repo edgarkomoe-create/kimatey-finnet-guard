@@ -1,0 +1,4 @@
+Modele,Exactitude,F1_Score,AUC
+Foret_Aleatoire,0.9456,0.8018,0.8468
+Regression_Logistique,0.9431,0.7908,0.8556
+Arbre_Decision,0.9425,0.789,0.8256

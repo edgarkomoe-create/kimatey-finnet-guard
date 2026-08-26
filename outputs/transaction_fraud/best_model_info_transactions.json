@@ -1,0 +1,24 @@
+{
+  "name": "Arbre_Decision_optimise_transactions",
+  "accuracy": 0.9419,
+  "f1_score": 0.7882,
+  "auc": 0.8292,
+  "best_params": {
+    "max_depth": 6,
+    "min_samples_leaf": 2,
+    "min_samples_split": 10
+  },
+  "features_used": [
+    "Montant",
+    "Ecart_Montant_Habituel",
+    "Nouveau_Destinataire",
+    "Heure_Transaction",
+    "Frequence_Transactions_24h",
+    "Delai_Depuis_Derniere_Min",
+    "Nb_Destinataires_Distincts_7j",
+    "Changement_Appareil"
+  ],
+  "n_train": 6400,
+  "n_test": 1600,
+  "donnees": "SYNTHETIQUES - voir generate_synthetic_data.py, non entraine sur de vraies transactions"
+}

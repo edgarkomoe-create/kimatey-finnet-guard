@@ -163,6 +163,28 @@ class TendancesResponse(BaseModel):
     par_demande: dict = Field(..., description="Comptage par type de demande signalee")
 
 
+# ---------------------------------------------------------------- Fraude transactionnelle (PROTOTYPE)
+class TransactionIn(BaseModel):
+    """ATTENTION : le modele associe est entraine sur des donnees SYNTHETIQUES
+    (voir src/transaction_fraud/). Prototype methodologique, pas encore valide
+    sur de vraies transactions."""
+    Montant: float
+    Ecart_Montant_Habituel: float = Field(..., description="Ratio vs montant moyen historique de l'utilisateur (1.0 = normal)")
+    Nouveau_Destinataire: int = Field(..., ge=0, le=1)
+    Heure_Transaction: int = Field(..., ge=0, le=23)
+    Frequence_Transactions_24h: int = Field(..., ge=0)
+    Delai_Depuis_Derniere_Min: float = Field(..., ge=0)
+    Nb_Destinataires_Distincts_7j: int = Field(..., ge=0)
+    Changement_Appareil: int = Field(..., ge=0, le=1)
+
+
+class TransactionPredictionResponse(BaseModel):
+    prediction: str
+    confidence: float
+    is_prototype: bool = Field(True, description="Toujours vrai : modele entraine sur donnees synthetiques")
+    avertissement: str = "Modele prototype entraine sur des donnees SYNTHETIQUES - non valide sur de vraies transactions."
+
+
 # ---------------------------------------------------------------- Sensibilisation ludique (fusion gamification)
 class GameScenarioOut(BaseModel):
     situation: str

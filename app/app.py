@@ -46,6 +46,7 @@ from core.kimatey_core import (
 # base de code (voir core/kimatey_core.py), donc pas de risque de divergence
 # entre "qui peut se connecter sur l'API" et "qui peut se connecter dans l'appli".
 from api.auth import register_user, verify_user_credentials, create_token, EmailDejaUtilise
+from api.transaction_model_service import get_transaction_model_service
 
 OUT_DIR = BASE_DIR / "outputs"
 MODEL_DIR = OUT_DIR / "models"
@@ -609,9 +610,9 @@ def render_organisation_view():
             del st.session_state["auth_token"]
             st.rerun()
 
-    tab_dashboard, tab_import, tab_predict, tab_live, tab_alerts = st.tabs(
+    tab_dashboard, tab_import, tab_predict, tab_live, tab_alerts, tab_transactions = st.tabs(
         ["📊 Tableau de bord", "📁 Analyser un fichier de logs", "🔎 Verifier un flux unique",
-         "🔴 Surveillance en direct", "🚨 Alertes detectees"]
+         "🔴 Surveillance en direct", "🚨 Alertes detectees", "🧪 Fraude Transactionnelle (Prototype)"]
     )
 
     # ---------------------------------------------------------------- Tab 1 : Dashboard
@@ -1110,6 +1111,73 @@ def render_organisation_view():
             if c2.button("Vider le journal"):
                 save_org_state({"alert_log": [], "score_history": org_state.get("score_history", [])})
                 st.rerun()
+
+    # ---------------------------------------------------------------- Tab 6 : Fraude transactionnelle (PROTOTYPE)
+    with tab_transactions:
+        st.warning(
+            "🧪 **Module prototype.** Le modele ci-dessous est entraine sur des donnees "
+            "**synthetiques** (fabriquees pour ressembler a de la fraude transactionnelle "
+            "plausible), pas sur de vraies transactions mobile money. Il demontre qu'un "
+            "second modele, complementaire a la detection reseau, peut etre construit avec "
+            "la meme methodologie - il ne doit pas etre utilise pour de vraies decisions "
+            "tant qu'il n'a pas ete reentraine sur des donnees reelles fournies par un "
+            "partenaire (operateur, fintech...)."
+        )
+        st.subheader("Evaluer une transaction (donnees d'exemple)")
+        st.write(
+            "Contrairement au modele reseau (flux techniques), ce modele evalue une "
+            "transaction mobile money a partir de son montant, sa frequence, et son "
+            "ecart par rapport aux habitudes du compte."
+        )
+
+        try:
+            tx_service = get_transaction_model_service()
+            tx_info = tx_service.info
+            k1, k2, k3 = st.columns(3)
+            k1.markdown(kpi_card("🎯", "Exactitude (test)", f"{tx_info['accuracy']*100:.1f}%", level="neutral",
+                                  sub="Mesuree sur donnees synthetiques"), unsafe_allow_html=True)
+            k2.markdown(kpi_card("⚖️", "F1-score", f"{tx_info['f1_score']*100:.1f}%", level="neutral"), unsafe_allow_html=True)
+            k3.markdown(kpi_card("📈", "AUC", f"{tx_info['auc']*100:.1f}%", level="neutral"), unsafe_allow_html=True)
+
+            with st.form("transaction_form"):
+                c1, c2 = st.columns(2)
+                with c1:
+                    montant = st.number_input("Montant (FCFA)", value=15000.0, min_value=0.0)
+                    ecart = st.number_input("Ecart vs montant habituel (1.0 = normal)", value=1.1, min_value=0.0)
+                    nouveau_dest = st.selectbox("Nouveau destinataire ?", ["Non", "Oui"])
+                    heure = st.slider("Heure de la transaction", 0, 23, 14)
+                with c2:
+                    freq_24h = st.number_input("Transactions dans les dernieres 24h", value=2, min_value=0, step=1)
+                    delai = st.number_input("Minutes depuis la derniere transaction", value=300.0, min_value=0.0)
+                    nb_dest_7j = st.number_input("Destinataires distincts (7 derniers jours)", value=2, min_value=0, step=1)
+                    changement_appareil = st.selectbox("Changement d'appareil ?", ["Non", "Oui"])
+                submitted_tx = st.form_submit_button("🔍 Evaluer la transaction", type="primary")
+
+            if submitted_tx:
+                df_tx = pd.DataFrame([{
+                    "Montant": montant, "Ecart_Montant_Habituel": ecart,
+                    "Nouveau_Destinataire": 1 if nouveau_dest == "Oui" else 0,
+                    "Heure_Transaction": heure, "Frequence_Transactions_24h": freq_24h,
+                    "Delai_Depuis_Derniere_Min": delai, "Nb_Destinataires_Distincts_7j": nb_dest_7j,
+                    "Changement_Appareil": 1 if changement_appareil == "Oui" else 0,
+                }])
+                preds, confs, _ = tx_service.predict(df_tx)
+                from api.transaction_model_service import CLASS_NAMES as TX_CLASS_NAMES
+                result_label = TX_CLASS_NAMES[int(preds[0])]
+                color = RED if result_label == "Suspecte" else GREEN
+                st.markdown(
+                    f'<div style="padding:1rem;border-radius:10px;background:{color}22;'
+                    f'border-left:4px solid {color};margin-top:1rem;">'
+                    f'<b style="color:{color}">{result_label}</b> - confiance {confs[0]:.1f}%'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+                st.caption("⚠️ Rappel : evaluation par un modele prototype sur donnees synthetiques.")
+        except FileNotFoundError:
+            st.error(
+                "Modele transactionnel non trouve. Executez `python src/transaction_fraud/train_pipeline.py` "
+                "pour generer les artefacts."
+            )
 
 
 # ==================================================================
