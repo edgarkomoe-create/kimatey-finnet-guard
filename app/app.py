@@ -613,9 +613,63 @@ def render_organisation_view():
             del st.session_state["auth_token"]
             st.rerun()
 
-    tab_dashboard, tab_import, tab_predict, tab_live, tab_alerts, tab_transactions = st.tabs(
+    # ------------------------------------------------------------------------
+    # Deux produits distincts sous un meme compte Organisation : la detection
+    # reseau (technologie validee) et la fraude transactionnelle (prototype).
+    # Design pense pour deux publics : un choix visuel clair pour un decideur
+    # non-technique (icone + une phrase), un badge de maturite pour une equipe
+    # technique qui veut savoir tout de suite ce qui est valide vs prototype.
+    # ------------------------------------------------------------------------
+    if "org_module" not in st.session_state:
+        st.session_state.org_module = None
+
+    if st.session_state.org_module is None:
+        st.markdown("### Que voulez-vous analyser aujourd'hui ?")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown(
+                '<div style="background:var(--navy-light,rgba(255,255,255,.04));border:1px solid rgba(0,212,181,.3);'
+                'border-radius:14px;padding:1.4rem;">'
+                '<div style="font-size:2rem;margin-bottom:.4rem;">🌐</div>'
+                '<h4 style="margin:0 0 .4rem 0;">Securite Reseau</h4>'
+                '<p style="color:var(--text-muted,#9fb3d1);font-size:.9rem;">Detecte les attaques sur votre '
+                'infrastructure (scan, DDoS, infiltration) a partir de vos flux reseau.</p>'
+                '<span style="color:#22c55e;font-size:.82rem;font-weight:600;">✅ Technologie validee (99% exactitude)</span>'
+                '</div>', unsafe_allow_html=True,
+            )
+            if st.button("Ouvrir Securite Reseau →", key="choose_reseau", type="primary", use_container_width=True):
+                st.session_state.org_module = "reseau"
+                st.rerun()
+        with c2:
+            st.markdown(
+                '<div style="background:var(--navy-light,rgba(255,255,255,.04));border:1px solid rgba(245,165,36,.3);'
+                'border-radius:14px;padding:1.4rem;">'
+                '<div style="font-size:2rem;margin-bottom:.4rem;">💰</div>'
+                '<h4 style="margin:0 0 .4rem 0;">Fraude Transactionnelle</h4>'
+                '<p style="color:var(--text-muted,#9fb3d1);font-size:.9rem;">Evalue si une transaction mobile '
+                'money ressemble a un comportement frauduleux (montant, frequence, destinataire).</p>'
+                '<span style="color:#f5a524;font-size:.82rem;font-weight:600;">🧪 Prototype (donnees synthetiques)</span>'
+                '</div>', unsafe_allow_html=True,
+            )
+            if st.button("Ouvrir Fraude Transactionnelle →", key="choose_transactions", use_container_width=True):
+                st.session_state.org_module = "transactions"
+                st.rerun()
+        return
+
+    if st.button("← Changer de module", key="back_module"):
+        st.session_state.org_module = None
+        st.rerun()
+
+    if st.session_state.org_module == "reseau":
+        render_reseau_module()
+    else:
+        render_transactions_module()
+
+
+def render_reseau_module():
+    tab_dashboard, tab_import, tab_predict, tab_live, tab_alerts = st.tabs(
         ["📊 Tableau de bord", "📁 Analyser un fichier de logs", "🔎 Verifier un flux unique",
-         "🔴 Surveillance en direct", "🚨 Alertes detectees", "🧪 Fraude Transactionnelle (Prototype)"]
+         "🔴 Surveillance en direct", "🚨 Alertes detectees"]
     )
 
     # ---------------------------------------------------------------- Tab 1 : Dashboard
@@ -1327,6 +1381,134 @@ def render_organisation_view():
                 "Modele transactionnel non trouve. Executez `python src/transaction_fraud/train_pipeline.py` "
                 "pour generer les artefacts."
             )
+
+
+# ==================================================================
+# Module Fraude Transactionnelle (PROTOTYPE) - design a deux niveaux de
+# lecture : un resume en langage simple d'abord (public non-technique), le
+# detail technique range dans des expanders (public technique qui veut
+# creuser). Meme logique que le module reseau, applique a un second produit.
+# ==================================================================
+def render_transactions_module():
+    st.markdown("### 💰 Fraude Transactionnelle")
+    st.caption("🧪 Module prototype - technologie validee, donnees d'entrainement synthetiques.")
+
+    st.info(
+        "**En langage simple :** ce module regarde une transaction mobile money (montant, "
+        "heure, destinataire) et dit si elle ressemble a un comportement normal ou a une "
+        "arnaque - un peu comme un agent qui remarque qu'un client habituel se comporte "
+        "soudain differemment."
+    )
+    with st.expander("🔬 Detail technique (pour une equipe technique)"):
+        st.write(
+            "Meme methodologie que le modele reseau : arbre de decision optimise par "
+            "GridSearchCV, entraine et evalue sur un jeu de test separe (80/20 stratifie). "
+            "**Difference importante** : entraine sur des donnees synthetiques generees par "
+            "regles (voir `src/transaction_fraud/generate_synthetic_data.py`), pas sur de "
+            "vraies transactions - les metriques ci-dessous mesurent la coherence du pipeline, "
+            "pas une performance en conditions reelles."
+        )
+
+    try:
+        tx_service = get_transaction_model_service()
+        tx_info = tx_service.info
+        k1, k2, k3 = st.columns(3)
+        k1.markdown(kpi_card("🎯", "Exactitude (test)", f"{tx_info['accuracy']*100:.1f}%", level="neutral",
+                              sub="Mesuree sur donnees synthetiques"), unsafe_allow_html=True)
+        k2.markdown(kpi_card("⚖️", "F1-score", f"{tx_info['f1_score']*100:.1f}%", level="neutral"), unsafe_allow_html=True)
+        k3.markdown(kpi_card("📈", "AUC", f"{tx_info['auc']*100:.1f}%", level="neutral"), unsafe_allow_html=True)
+
+        st.markdown("---")
+        st.subheader("Analyser un fichier de transactions (lot)")
+        with st.expander("🔬 Colonnes techniques attendues dans le fichier"):
+            st.write("Les colonnes manquantes seront remplacees par la valeur mediane observee a l'entrainement "
+                     "(memes limites connues que le modele reseau - voir README).")
+            st.code(", ".join(tx_service.features))
+
+        demo_tx_path = OUT_DIR_TX / "transactions_synthetiques.csv"
+        if demo_tx_path.exists():
+            st.download_button(
+                "📎 Telecharger un exemple de fichier synthetique",
+                demo_tx_path.read_bytes(), "exemple_transactions_synthetiques.csv", "text/csv",
+            )
+
+        uploaded_tx = st.file_uploader("Choisir un fichier CSV de transactions", type=["csv"], key="tx_csv_uploader")
+        if uploaded_tx is not None:
+            df_tx_batch = pd.read_csv(uploaded_tx)
+            st.write(f"**{len(df_tx_batch)} transactions chargees.**")
+            st.dataframe(df_tx_batch.head(10), use_container_width=True)
+
+            if st.button("Lancer l'analyse du lot", type="primary", key="tx_batch_analyze"):
+                preds, confs, probas = tx_service.predict(df_tx_batch)
+                from api.transaction_model_service import CLASS_NAMES as TX_CLASS_NAMES
+                df_tx_results = df_tx_batch.copy()
+                df_tx_results["Prediction"] = [TX_CLASS_NAMES[p] for p in preds]
+                df_tx_results["Confiance (%)"] = confs.round(1)
+
+                n_suspect = int((preds != 0).sum())
+                rate_tx = n_suspect / len(df_tx_batch) * 100
+
+                st.session_state.last_tx_batch = {
+                    "n_total": len(df_tx_batch), "n_suspect": n_suspect, "rate": rate_tx,
+                    "df_results": df_tx_results,
+                }
+
+        if "last_tx_batch" in st.session_state:
+            tx_data = st.session_state.last_tx_batch
+            lvl_tx = threat_level(tx_data["rate"])
+            colA, colB, colC = st.columns(3)
+            colA.markdown(kpi_card("📡", "Transactions verifiees", tx_data["n_total"], level="neutral"), unsafe_allow_html=True)
+            colB.markdown(kpi_card("🚨", "Transactions suspectes", tx_data["n_suspect"], level=lvl_tx), unsafe_allow_html=True)
+            colC.markdown(kpi_card("📊", "Part suspecte", f"{tx_data['rate']:.1f}%", level=lvl_tx), unsafe_allow_html=True)
+
+            st.markdown("**Detail des transactions (top 200 affiches)**")
+            st.dataframe(tx_data["df_results"].head(200), use_container_width=True)
+            csv_tx_out = tx_data["df_results"].to_csv(index=False).encode("utf-8")
+            st.download_button("Telecharger les resultats (CSV)", csv_tx_out, "resultats_transactions.csv", "text/csv")
+            st.caption("⚠️ Rappel : evaluation par un modele prototype sur donnees synthetiques - "
+                       "ne pas utiliser pour de vraies decisions.")
+
+        st.markdown("---")
+        st.subheader("Evaluer une transaction unique (formulaire)")
+        with st.form("transaction_form"):
+            c1, c2 = st.columns(2)
+            with c1:
+                montant = st.number_input("Montant (FCFA)", value=15000.0, min_value=0.0)
+                ecart = st.number_input("Ecart vs montant habituel (1.0 = normal)", value=1.1, min_value=0.0)
+                nouveau_dest = st.selectbox("Nouveau destinataire ?", ["Non", "Oui"])
+                heure = st.slider("Heure de la transaction", 0, 23, 14)
+            with c2:
+                freq_24h = st.number_input("Transactions dans les dernieres 24h", value=2, min_value=0, step=1)
+                delai = st.number_input("Minutes depuis la derniere transaction", value=300.0, min_value=0.0)
+                nb_dest_7j = st.number_input("Destinataires distincts (7 derniers jours)", value=2, min_value=0, step=1)
+                changement_appareil = st.selectbox("Changement d'appareil ?", ["Non", "Oui"])
+            submitted_tx = st.form_submit_button("🔍 Evaluer la transaction", type="primary")
+
+        if submitted_tx:
+            df_tx = pd.DataFrame([{
+                "Montant": montant, "Ecart_Montant_Habituel": ecart,
+                "Nouveau_Destinataire": 1 if nouveau_dest == "Oui" else 0,
+                "Heure_Transaction": heure, "Frequence_Transactions_24h": freq_24h,
+                "Delai_Depuis_Derniere_Min": delai, "Nb_Destinataires_Distincts_7j": nb_dest_7j,
+                "Changement_Appareil": 1 if changement_appareil == "Oui" else 0,
+            }])
+            preds, confs, _ = tx_service.predict(df_tx)
+            from api.transaction_model_service import CLASS_NAMES as TX_CLASS_NAMES
+            result_label = TX_CLASS_NAMES[int(preds[0])]
+            color = RED if result_label == "Suspecte" else GREEN
+            st.markdown(
+                f'<div style="padding:1rem;border-radius:10px;background:{color}22;'
+                f'border-left:4px solid {color};margin-top:1rem;">'
+                f'<b style="color:{color}">{result_label}</b> - confiance {confs[0]:.1f}%'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+            st.caption("⚠️ Rappel : evaluation par un modele prototype sur donnees synthetiques.")
+    except FileNotFoundError:
+        st.error(
+            "Modele transactionnel non trouve. Executez `python src/transaction_fraud/train_pipeline.py` "
+            "pour generer les artefacts."
+        )
 
 
 # ==================================================================
