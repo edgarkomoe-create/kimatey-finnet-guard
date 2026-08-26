@@ -72,8 +72,9 @@
 @media (max-width: 860px) { .problem-grid { grid-template-columns: 1fr; } }
 .problem-card {
   background: var(--navy-light); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px;
-  padding: 1.4rem 1.3rem;
+  padding: 1.4rem 1.3rem; transition: transform .2s ease, border-color .2s ease;
 }
+.problem-card:hover { transform: translateY(-3px); border-color: rgba(0,212,181,0.3); }
 .problem-figure { font-family: "Space Grotesk", sans-serif; font-size: 1.9rem; font-weight: 700; color: var(--teal); margin: 0 0 .5rem 0; }
 .problem-text { color: var(--text-muted); font-size: .92rem; line-height: 1.55; margin: 0; }
 
@@ -83,7 +84,9 @@
 .how-card {
   background: linear-gradient(160deg, var(--navy-mid) 0%, var(--navy-light) 100%);
   border: 1px solid rgba(0,212,181,0.22); border-radius: 16px; padding: 1.7rem 1.5rem;
+  transition: transform .2s ease, border-color .2s ease;
 }
+.how-card:hover { transform: translateY(-3px); border-color: rgba(0,212,181,0.45); }
 .how-tag {
   display: inline-block; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
   color: var(--teal); background: rgba(0,212,181,0.12); border: 1px solid rgba(0,212,181,0.35);
@@ -105,3 +108,10 @@
 .proof-figure { font-family: "Space Grotesk", sans-serif; font-size: 1.9rem; font-weight: 700; color: var(--text-light); margin: 0; }
 .proof-label { color: var(--text-muted); font-size: .82rem; margin: .3rem 0 0 0; }
 .proof-note { text-align: center; color: var(--text-muted); font-size: .82rem; font-style: italic; margin: .4rem 0 0 0; }
+
+/* ---- Apparition au defilement : un seul mecanisme coherent pour toute la page ---- */
+.reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s cubic-bezier(.16,.8,.3,1), transform .7s cubic-bezier(.16,.8,.3,1); }
+.reveal.revealed { opacity: 1; transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+}
