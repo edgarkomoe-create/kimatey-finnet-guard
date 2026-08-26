@@ -16,7 +16,7 @@ import sys
 import time
 import uuid
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import joblib
 import numpy as np
@@ -401,6 +401,31 @@ def mttr_hours(alert_log):
     if not durations:
         return None
     return sum(durations) / len(durations)
+
+
+def trend_delta_pct(alert_log, days=7):
+    """Compare le nombre d'alertes de la fenetre en cours (derniers `days` jours)
+    a la fenetre precedente de meme duree - meme logique que les indicateurs
+    'vs last 7 days' d'un dashboard SOC classique. Retourne (delta_pct, texte)
+    ou (None, texte_explicatif) si pas assez d'historique pour comparer
+    honnetement (on n'invente jamais une tendance sur des donnees insuffisantes)."""
+    if not alert_log:
+        return None, "Pas encore assez de donnees pour une tendance."
+    try:
+        horodatages = [datetime.strptime(a["Horodatage"], "%Y-%m-%d %H:%M:%S") for a in alert_log]
+    except (ValueError, KeyError):
+        return None, "Pas encore assez de donnees pour une tendance."
+    now = max(horodatages)
+    window_current = sum(1 for h in horodatages if now - timedelta(days=days) <= h <= now)
+    window_previous = sum(1 for h in horodatages if now - timedelta(days=2 * days) <= h < now - timedelta(days=days))
+    oldest = min(horodatages)
+    if oldest > now - timedelta(days=2 * days):
+        return None, f"Historique < {2*days} j - tendance pas encore fiable."
+    if window_previous == 0:
+        return None, "Pas d'activite sur la periode precedente pour comparer."
+    delta = (window_current - window_previous) / window_previous * 100
+    arrow = "▲" if delta > 0 else ("▼" if delta < 0 else "→")
+    return delta, f"{arrow} {abs(delta):.1f}% vs les {days} j precedents"
 
 
 @st.cache_data(show_spinner=False)
@@ -1139,8 +1164,10 @@ def render_reseau_module():
         treated_rate = round(100 * n_closed / len(alert_log)) if alert_log else 0
         mttr = mttr_hours(alert_log)
         score_level = "good" if score >= 70 else ("warn" if score >= 40 else "threat")
+        delta_pct, delta_text = trend_delta_pct(alert_log, days=7)
+        trend_level = "neutral" if delta_pct is None else ("threat" if delta_pct > 0 else "good")
 
-        k1, k2, k3, k4 = st.columns(4)
+        k1, k2, k3, k4, k5 = st.columns(5)
         k1.markdown(kpi_card("🛡️", "Score de securite", f"{score}/100", level=score_level,
                               sub="Penalise selon volume et gravite des alertes encore ouvertes"), unsafe_allow_html=True)
         k2.markdown(kpi_card("🚨", "Alertes ouvertes", str(n_open), level=("threat" if n_open > 0 else "good"),
@@ -1149,6 +1176,8 @@ def render_reseau_module():
                               sub="Part des alertes marquees comme fermees"), unsafe_allow_html=True)
         k4.markdown(kpi_card("⏱️", "Temps moyen de resolution", f"{mttr:.1f} h" if mttr is not None else "N/A",
                               level="neutral", sub="Calcule sur les alertes deja fermees"), unsafe_allow_html=True)
+        k5.markdown(kpi_card("📈", "Tendance", delta_text if delta_pct is not None else "N/A",
+                              level=trend_level, sub="Volume d'alertes, periode vs periode"), unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
         c1, c2 = st.columns(2)
