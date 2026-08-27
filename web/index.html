@@ -102,35 +102,56 @@
         <p class="how-tag" data-i18n="how2_tag">IA generative</p>
         <h3 data-i18n="how2_h3">Lieutenant Cyber</h3>
         <p data-i18n="how2_p">Un assistant conversationnel (propulse par Google Gemini) auquel un citoyen decrit un SMS ou un
-           appel suspect, en langage naturel ou a l'oral. Il explique le risque simplement, sans jargon,
-           et sans jamais collecter de donnee personnelle.</p>
+           appel suspect, en langage naturel, a l'oral ou via une capture d'ecran. Il explique le risque
+           simplement, sans jargon, et sans jamais collecter de donnee personnelle.</p>
         <ul class="how-stats">
           <li data-i18n="how2_s1">Disponible cote Organisation et Grand Public</li>
           <li data-i18n="how2_s2">Complete par un jeu de vigilance gamifie</li>
           <li data-i18n="how2_s3">Zero collecte de donnees personnelles</li>
         </ul>
       </article>
+
+      <article class="how-card">
+        <p class="how-tag" data-i18n="how3_tag">🧪 Prototype</p>
+        <h3 data-i18n="how3_h3">Fraude Transactionnelle</h3>
+        <p data-i18n="how3_p">Un second modele, meme methodologie, evalue si une transaction mobile money
+           (montant, frequence, destinataire) ressemble a un comportement frauduleux. Entraine sur des
+           donnees synthetiques - demontre la capacite d'extension a un nouveau domaine.</p>
+        <ul class="how-stats">
+          <li data-i18n="how3_s1">Meme pipeline que le modele reseau</li>
+          <li data-i18n="how3_s2">Score de securite et journal dedies</li>
+          <li data-i18n="how3_s3">Donnees synthetiques, clairement etiquetees</li>
+        </ul>
+      </article>
     </div>
   </section>
 
-  <!-- ===== LES DEUX ESPACES (fonctionnel) ===== -->
+  <!-- ===== LES TROIS ESPACES (fonctionnel) ===== -->
   <section class="section spaces reveal" id="espaces">
     <p class="section-eyebrow" data-i18n="spaces_eyebrow">La plateforme</p>
     <h2 data-i18n="spaces_h2">Choisissez votre espace</h2>
 
-    <div class="cards">
+    <div class="cards cards-3">
       <div class="card">
         <h3 data-i18n="card_org_h3">🏢 Espace Organisation</h3>
-        <p data-i18n="card_org_p">Tableau de bord technique : detection en temps reel, analyse de logs, surveillance en direct,
-           journal d'alertes. Pour les equipes IT/securite des fintechs, operateurs mobile money,
-           institutions financieres et administrations.</p>
+        <p data-i18n="card_org_p">Deux modules : Securite Reseau (valide) et Fraude Transactionnelle (prototype).
+           Dashboard SOC anime, journal d'alertes persistant, reglages de sensibilite. Compte requis -
+           pour les equipes IT/securite des fintechs, operateurs mobile money et institutions financieres.</p>
         <a class="btn" id="link-organisation" href="#" data-i18n="card_org_cta">Entrer dans l'Espace Organisation →</a>
       </div>
       <div class="card">
         <h3 data-i18n="card_public_h3">👥 Espace Grand Public</h3>
-        <p data-i18n="card_public_p">Discutez avec Lieutenant Cyber, testez vos reflexes face aux arnaques mobile money, et aidez
-           a en reperer de nouvelles - sans jamais partager d'information personnelle.</p>
+        <p data-i18n="card_public_p">Discutez avec Lieutenant Cyber (texte, voix ou image), testez vos reflexes
+           face aux arnaques mobile money, et aidez a en reperer de nouvelles - sans jamais partager
+           d'information personnelle. Libre d'acces.</p>
         <a class="btn" href="public.html" data-i18n="card_public_cta">Entrer dans l'Espace Grand Public →</a>
+      </div>
+      <div class="card">
+        <h3 data-i18n="card_academic_h3">🎓 Espace Academique</h3>
+        <p data-i18n="card_academic_p">Cas d'etude pedagogique : explications, Professeur Cyber en Q&amp;A,
+           mini-quiz, import de jeu de donnees. Libre d'acces, aucun compte requis - pour enseignants
+           et etudiants.</p>
+        <a class="btn" id="link-academic" href="#" data-i18n="card_academic_cta">Entrer dans l'Espace Academique →</a>
       </div>
     </div>
   </section>
@@ -149,15 +170,17 @@
 
   <p class="footer-note" data-i18n="footer_note_index">
     Kimatey FinNet Guard - Realise par Komoe Edgar Junior - Projet ML Master 1 UFRMI - Responsable de
-    l'enseignement : Dr ASSOHOUN E Stanislas. L'Espace Organisation reste servi par l'application Streamlit
-    existante (deep-link direct) ; l'Espace Grand Public est une page web independante consommant
-    directement l'API (voir config.js).
+    l'enseignement : Dr ASSOHOUN E Stanislas. Trois espaces independants : Organisation (Streamlit,
+    compte requis), Grand Public et dashboard SOC anime (pages web independantes consommant
+    directement l'API), Academique (Streamlit, libre d'acces). Comptes et alertes persistants
+    (PostgreSQL).
   </p>
 </div>
 
 <script src="i18n.js"></script>
 <script>
   document.getElementById("link-organisation").href = ORG_APP_URL + "/?view=organisation";
+  document.getElementById("link-academic").href = ORG_APP_URL + "/?view=academic";
 
   // Apparition au defilement (un seul mecanisme, coherent pour toute la page).
   // Respecte prefers-reduced-motion via le CSS (.reveal reste visible sans JS).

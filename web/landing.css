@@ -100,6 +100,8 @@
 
 /* ---- Espaces (reprend .cards de style.css) ---- */
 .spaces .cards { margin-top: .2rem; }
+.cards-3 { grid-template-columns: 1fr 1fr 1fr !important; }
+@media (max-width: 860px) { .cards-3 { grid-template-columns: 1fr !important; } }
 
 /* ---- Preuve technique ---- */
 .proof-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; margin-bottom: 1rem; }

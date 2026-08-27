@@ -633,8 +633,8 @@ def render_organisation_view():
 
 
 def render_reseau_module():
-    tab_simple, tab_dashboard, tab_import, tab_predict, tab_live, tab_alerts, tab_viz = st.tabs(
-        ["👔 Resume simple", "📊 Tableau de bord", "📁 Analyser un fichier de logs", "🔎 Verifier un flux unique",
+    tab_simple, tab_settings, tab_import, tab_predict, tab_live, tab_alerts, tab_viz = st.tabs(
+        ["👔 Resume simple", "⚙️ Reglages", "📁 Analyser un fichier de logs", "🔎 Verifier un flux unique",
          "🔴 Surveillance en direct", "🚨 Alertes detectees", "📈 Visualisation"]
     )
 
@@ -722,59 +722,14 @@ def render_reseau_module():
                     st.write(f"**🎖️ Lieutenant Cyber** : {st.session_state.lc_executive_avis}")
 
     # ---------------------------------------------------------------- Tab 1 : Dashboard
-    with tab_dashboard:
-        st.markdown('<p class="section-title">Le systeme est-il fiable ? (mesure sur des donnees de test jamais vues a l\'entrainement)</p>', unsafe_allow_html=True)
-        k1, k2, k3, k4 = st.columns(4)
-        k1.markdown(kpi_card("🎯", "Reponses correctes", "99 sur 100", level="good",
-                              sub=f"Exactitude (accuracy) : {BEST_MODEL_INFO['accuracy']*100:.2f}%"), unsafe_allow_html=True)
-        k2.markdown(kpi_card("⚖️", "Equilibre entre les 4 types de trafic", f"{BEST_MODEL_INFO['f1_macro']*100:.1f}%", level="good",
-                              sub=f"F1-score macro : {BEST_MODEL_INFO['f1_macro']*100:.2f}%"), unsafe_allow_html=True)
-        k3.markdown(kpi_card("📈", "Capacite a distinguer une vraie menace", f"{BEST_MODEL_INFO['auc_macro']*100:.1f}%", level="good",
-                              sub=f"AUC macro : {BEST_MODEL_INFO['auc_macro']*100:.2f}%"), unsafe_allow_html=True)
-        k4.markdown(kpi_card("🧬", "Signaux surveilles en permanence", f"{len(SELECTED_FEATURES)} / {len(FEATURES)}", level="neutral",
-                              sub="Variables retenues apres selection (RFE)"), unsafe_allow_html=True)
-
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown("**Comparaison de 5 techniques testees**")
-            st.markdown('<p class="chart-hint">Plus la barre est haute, plus la technique classe correctement le trafic. '
-                         'La technique retenue en production est l\'Arbre de Decision.</p>', unsafe_allow_html=True)
-            if (OUT_DIR / "optimized_results.csv").exists():
-                df_opt = pd.read_csv(OUT_DIR / "optimized_results.csv")
-                st.dataframe(df_opt, use_container_width=True, hide_index=True)
-                fig = go.Figure(data=[go.Bar(
-                    x=df_opt["Modele"].str.replace("_optimise", ""), y=df_opt["Exactitude"],
-                    marker_color=TEAL, text=(df_opt["Exactitude"] * 100).round(2).astype(str) + "%",
-                    textposition="outside", textfont=dict(color=TEXT_LIGHT, size=10),
-                )])
-                fig.update_yaxes(title="Exactitude", range=[0.9, 1.0])
-                plotly_dark_layout(fig, height=340)
-                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-        with c2:
-            st.markdown("**Le systeme sait-il bien reconnaitre chaque type de menace ?**")
-            st.markdown('<p class="chart-hint">Plus une courbe se rapproche du coin superieur gauche, mieux le systeme '
-                         'distingue ce type de menace du trafic normal.</p>', unsafe_allow_html=True)
-            roc_dark = OUT_DIR / "figures" / "optimized" / "roc_dashboard_dark.png"
-            roc_path = roc_dark if roc_dark.exists() else OUT_DIR / "figures" / "optimized" / f"roc_{BEST_MODEL_INFO['name']}.png"
-            if roc_path.exists():
-                st.image(str(roc_path))
-            cm_dark = OUT_DIR / "figures" / "optimized" / "cm_dashboard_dark.png"
-            cm_path = cm_dark if cm_dark.exists() else OUT_DIR / "figures" / "optimized" / f"cm_{BEST_MODEL_INFO['name']}.png"
-            if cm_path.exists():
-                st.markdown("**Detail des erreurs, ligne par ligne**")
-                st.image(str(cm_path))
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("**Moins de signaux surveilles, meme fiabilite**")
-        st.markdown('<p class="chart-hint">En ne gardant que 5 signaux cles sur les 9 collectes, le systeme reste '
-                     'aussi fiable, tout en etant plus simple a auditer pour un analyste.</p>', unsafe_allow_html=True)
-        if (OUT_DIR / "comparison_step3.csv").exists():
-            st.dataframe(pd.read_csv(OUT_DIR / "comparison_step3.csv"), use_container_width=True, hide_index=True)
+    with tab_settings:
+        st.markdown('<p class="section-title">Reglages de detection</p>', unsafe_allow_html=True)
         st.caption(
-            "🎓 Pour une exploration pedagogique approfondie (explications, Professeur Cyber, "
-            "quiz, import de jeu de donnees), consultez l'Espace Academique depuis la page d'accueil."
+            "Cet espace se concentre sur votre usage operationnel : traiter vos donnees et ajuster "
+            "le comportement de la detection. Pour la methodologie et les preuves de performance "
+            "du modele (comparaison d'algorithmes, courbes ROC, matrice de confusion), consultez "
+            "l'🎓 Espace Academique depuis la page d'accueil - pense pour enseignants et etudiants."
         )
-
         st.markdown("---")
         st.subheader("🎛️ Personnalisation du modele (modele hybride)")
         st.caption(
