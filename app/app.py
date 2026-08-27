@@ -1323,12 +1323,12 @@ def render_reseau_module():
             "**interactive et animee** (jauge circulaire, courbes Chart.js) - memes donnees, "
             "presentation plus riche. Connectez-vous avec le meme compte."
         )
-        st.link_button("Ouvrir le Dashboard Visuel →", "https://kimatey-finnet-guard.vercel.app/dashboard.html",
+        st.link_button("Ouvrir le Dashboard Visuel (Reseau) →", "https://kimatey-finnet-guard.vercel.app/dashboard.html?domaine=reseau",
                         type="primary", use_container_width=False)
         st.caption(
-            "ℹ️ Cette version web anime couvre pour l'instant uniquement la Securite Reseau. "
-            "Les modules Fraude Transactionnelle et Espace Academique restent consultables ici, "
-            "sur Streamlit uniquement, pour le moment."
+            "ℹ️ Ce lien affiche uniquement les donnees Securite Reseau - un lien equivalent existe "
+            "dans le module Fraude Transactionnelle, scope separement. L'Espace Academique n'a pas "
+            "de journal d'alertes, il reste consultable ici uniquement."
         )
 
 
@@ -1619,6 +1619,13 @@ def render_transactions_module():
                     if cols[5].button(btn_label, key=f"tx_toggle_{alert['ID']}"):
                         toggle_alert_status(alert["ID"], domaine="transactions")
                         st.rerun()
+
+        st.link_button("📈 Ouvrir le Dashboard Visuel (Transactions) →",
+                        "https://kimatey-finnet-guard.vercel.app/dashboard.html?domaine=transactions")
+        st.caption(
+            "ℹ️ Ce lien affiche uniquement les donnees Transactions - le domaine Securite "
+            "Reseau reste separe, coherent avec les deux produits distincts de l'Espace Organisation."
+        )
 
         st.markdown("---")
         st.subheader("Analyser un fichier de transactions (lot)")

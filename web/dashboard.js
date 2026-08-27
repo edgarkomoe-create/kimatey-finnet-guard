@@ -114,6 +114,21 @@ document.querySelectorAll(".domain-toggle-btn").forEach((btn) => {
 });
 
 // ==========================================================================
+// Contexte de domaine impose par l'URL (?domaine=reseau ou ?domaine=transactions).
+// Quand l'utilisateur arrive depuis un espace precis (lien "Visualisation" dans
+// l'Espace Reseau ou l'Espace Transactions de Streamlit), le dashboard reste
+// STRICTEMENT scope a ce domaine - aucune visibilite sur l'autre, coherent
+// avec le principe "deux produits distincts" de l'Espace Organisation. Le
+// selecteur ne reste visible qu'en cas d'acces direct (pas de contexte fourni).
+const urlParams = new URLSearchParams(window.location.search);
+const urlDomain = urlParams.get("domaine");
+if (urlDomain === "reseau" || urlDomain === "transactions") {
+  currentDomain = urlDomain;
+  document.getElementById("header-eyebrow").innerHTML = DOMAIN_CONFIG[currentDomain].eyebrow;
+  document.querySelector(".domain-toggle").style.display = "none";
+}
+
+// ==========================================================================
 // Chargement + rendu du dashboard
 // ==========================================================================
 async function showDashboard() {
