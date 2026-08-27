@@ -108,7 +108,11 @@
         </div>
       </div>
 
-      <div class="chart-grid">
+      <div class="chart-grid chart-grid-3">
+        <div class="chart-card">
+          <p class="chart-title">Alertes par statut</p>
+          <canvas id="chart-status"></canvas>
+        </div>
         <div class="chart-card">
           <p class="chart-title">Alertes ouvertes par gravite</p>
           <canvas id="chart-severity"></canvas>
@@ -121,6 +125,11 @@
 
       <div class="alert-list-card">
         <p class="chart-title">Journal des alertes</p>
+        <div class="date-filter-row">
+          <label>Periode : <input type="date" id="filter-date-start"></label>
+          <label>a <input type="date" id="filter-date-end"></label>
+          <button class="btn secondary" id="filter-date-reset">Reinitialiser</button>
+        </div>
         <div id="alert-list"></div>
       </div>
 

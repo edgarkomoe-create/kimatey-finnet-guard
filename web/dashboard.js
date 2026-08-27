@@ -5,7 +5,9 @@ const DASH_TOKEN_KEY = "kimatey_dash_token";
 const DASH_EMAIL_KEY = "kimatey_dash_email";
 let severityChart = null;
 let timelineChart = null;
+let statusChart = null;
 let currentDomain = "reseau"; // 'reseau' ou 'transactions'
+let currentDashboardData = null; // derniere reponse API, pour filtrage de date cote client
 
 const DOMAIN_CONFIG = {
   reseau: {
@@ -166,6 +168,8 @@ function renderSimpleView(data) {
 }
 
 function renderTechnicalView(data) {
+  currentDashboardData = data; // conserve pour le filtrage de date cote client (voir applyDateFilter)
+
   // ---- Jauge de score animee ----
   const circumference = 327; // 2 * PI * 52
   const offset = circumference - (data.score / 100) * circumference;
@@ -180,6 +184,20 @@ function renderTechnicalView(data) {
   document.getElementById("kpi-treated").textContent = data.treated_rate_pct + "%";
   document.getElementById("kpi-mttr").textContent = data.mttr_hours !== null ? data.mttr_hours.toFixed(1) + " h" : "N/A";
   document.getElementById("kpi-trend").textContent = data.trend_delta_pct !== null ? data.trend_text : "N/A";
+
+  // ---- Graphique statut (donut Ouvert/Ferme) ----
+  if (statusChart) statusChart.destroy();
+  statusChart = new Chart(document.getElementById("chart-status"), {
+    type: "doughnut",
+    data: {
+      labels: ["Ouvertes", "Fermees"],
+      datasets: [{ data: [data.n_open, data.n_closed], backgroundColor: ["#e74c3c", "#22c55e"], borderColor: "#132C53", borderWidth: 3 }],
+    },
+    options: {
+      animation: { duration: 900, easing: "easeOutQuart" },
+      plugins: { legend: { position: "bottom", labels: { color: "#9FB3CC", font: { size: 11 } } } },
+    },
+  });
 
   // ---- Graphique gravite (barres) ----
   const sevLabels = Object.keys(data.severity_breakdown);
@@ -201,12 +219,19 @@ function renderTechnicalView(data) {
     },
   });
 
-  // ---- Graphique chronologie multi-gravite (courbes) ----
-  const days = Object.keys(data.day_severity_series);
-  const allMenaces = [...new Set(days.flatMap((d) => Object.keys(data.day_severity_series[d])))];
+  renderTimelineChart(data.day_severity_series);
+  renderAlertList(data.alerts);
+}
+
+// ---- Graphique chronologie multi-gravite (courbes), extrait en fonction separee
+// pour pouvoir le re-dessiner uniquement (donnees filtrees par date) sans tout
+// re-fetcher depuis l'API. ----
+function renderTimelineChart(daySeveritySeries) {
+  const days = Object.keys(daySeveritySeries);
+  const allMenaces = [...new Set(days.flatMap((d) => Object.keys(daySeveritySeries[d])))];
   const datasets = allMenaces.map((menace) => ({
     label: menace.split(" / ")[0],
-    data: days.map((d) => data.day_severity_series[d][menace] || 0),
+    data: days.map((d) => daySeveritySeries[d][menace] || 0),
     borderColor: SEVERITY_COLORS[menace] || "#00D4B5",
     backgroundColor: "transparent",
     tension: 0.35,
@@ -225,14 +250,16 @@ function renderTechnicalView(data) {
       },
     },
   });
+}
 
-  // ---- Journal des alertes ----
+// ---- Journal des alertes, extrait en fonction separee pour etre reutilisable ----
+function renderAlertList(alerts) {
   const listEl = document.getElementById("alert-list");
-  if (data.alerts.length === 0) {
+  if (alerts.length === 0) {
     listEl.innerHTML = '<p style="color:var(--text-muted)">Aucune alerte enregistree.</p>';
     return;
   }
-  listEl.innerHTML = data.alerts.slice(0, 50).map((a) => `
+  listEl.innerHTML = alerts.slice(0, 50).map((a) => `
     <div class="alert-row">
       <span class="alert-status-dot ${a.Statut === "Ouvert" ? "open" : "closed"}"></span>
       <span class="alert-menace">${a.Menace}</span>
@@ -257,6 +284,47 @@ function renderTechnicalView(data) {
     });
   });
 }
+
+// ==========================================================================
+// Filtre de date (chronologie + journal) - filtrage cote client sur les
+// donnees deja recuperees (day_severity_series couvre 14 jours cote serveur ;
+// le journal complet est deja dans currentDashboardData.alerts).
+// ==========================================================================
+function applyDateFilter() {
+  if (!currentDashboardData) return;
+  const startStr = document.getElementById("filter-date-start").value;
+  const endStr = document.getElementById("filter-date-end").value;
+
+  let filteredSeries = currentDashboardData.day_severity_series;
+  if (startStr || endStr) {
+    filteredSeries = {};
+    for (const [day, counts] of Object.entries(currentDashboardData.day_severity_series)) {
+      if (startStr && day < startStr) continue;
+      if (endStr && day > endStr) continue;
+      filteredSeries[day] = counts;
+    }
+  }
+  renderTimelineChart(filteredSeries);
+
+  let filteredAlerts = currentDashboardData.alerts;
+  if (startStr || endStr) {
+    filteredAlerts = currentDashboardData.alerts.filter((a) => {
+      const day = a.Horodatage.slice(0, 10);
+      if (startStr && day < startStr) return false;
+      if (endStr && day > endStr) return false;
+      return true;
+    });
+  }
+  renderAlertList(filteredAlerts);
+}
+
+document.getElementById("filter-date-start").addEventListener("change", applyDateFilter);
+document.getElementById("filter-date-end").addEventListener("change", applyDateFilter);
+document.getElementById("filter-date-reset").addEventListener("click", () => {
+  document.getElementById("filter-date-start").value = "";
+  document.getElementById("filter-date-end").value = "";
+  applyDateFilter();
+});
 
 // ==========================================================================
 // Commentaire IA (Lieutenant Cyber) - persona executif ou analyste, meme
