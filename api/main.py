@@ -46,7 +46,7 @@ from core.pass_system import (
 from core.sensitivity import get_threshold, set_threshold, DEFAULT_THRESHOLD
 from core.enriched_model import generate_enriched_model, get_enriched_model_status
 from core.alert_log import (
-    load_org_state, log_alert as record_alert, toggle_alert_status,
+    load_org_state, log_alert as record_alert, log_alerts_bulk, toggle_alert_status,
     compute_security_score, mttr_hours, trend_delta_pct, severity_breakdown, day_severity_series,
 )
 from api.model_service import get_model_service, CLASS_NAMES
@@ -229,11 +229,14 @@ async def predict_csv(file: UploadFile = File(..., description="CSV contenant le
     df_out["Confiance_pct"] = [round(float(pr.max()) * 100, 2) for pr in probas]
     n_threats = int((preds != 0).sum())
 
-    # Journalise les alertes dans le meme fichier partage que Streamlit (voir core/alert_log.py) -
-    # limite a 500 par lot, meme discipline que l'import CSV cote Streamlit.
-    for i, p in enumerate(preds[:500]):
-        if int(p) != 0:
-            record_alert(f"Import CSV (API) - ligne {i+1}", int(p), float(probas[i].max()) * 100)
+    # Journalise les alertes en un seul lot (voir core/alert_log.py, log_alerts_bulk) -
+    # une seule connexion/transaction Postgres au lieu d'une par alerte, essentiel
+    # pour la performance sur de gros lots (jusqu'a 500 alertes journalisees).
+    entries_to_log = [
+        {"source": f"Import CSV (API) - ligne {i+1}", "pred_class": int(p), "confidence": float(probas[i].max()) * 100}
+        for i, p in enumerate(preds[:500])
+    ]
+    log_alerts_bulk(entries_to_log, domaine="reseau")
 
     return JSONResponse({
         "summary": {
@@ -658,10 +661,11 @@ async def predict_transaction_csv(file: UploadFile = File(..., description="CSV 
     n_suspect = int((preds != 0).sum())
 
     from api.transaction_model_service import CLASS_NAMES as TX_CLASS_NAMES
-    for i, p in enumerate(preds[:500]):
-        if int(p) != 0:
-            record_alert(f"Import CSV Transactions (API) - ligne {i+1}", int(p), float(confs[i]),
-                          domaine="transactions", class_names=TX_CLASS_NAMES)
+    entries_to_log = [
+        {"source": f"Import CSV Transactions (API) - ligne {i+1}", "pred_class": int(p), "confidence": float(confs[i])}
+        for i, p in enumerate(preds[:500])
+    ]
+    log_alerts_bulk(entries_to_log, domaine="transactions", class_names=TX_CLASS_NAMES)
 
     return TransactionBatchSummary(
         n_total=len(df),

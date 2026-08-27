@@ -345,7 +345,7 @@ def predict_with_confidence(df_raw):
 # SOC restent toujours synchronises sur le meme fichier de donnees.
 # ------------------------------------------------------------------------
 from core.alert_log import (
-    load_org_state, save_org_state, log_alert as _log_alert_shared,
+    load_org_state, save_org_state, log_alert as _log_alert_shared, log_alerts_bulk,
     compute_security_score, record_score_snapshot, mttr_hours, trend_delta_pct, toggle_alert_status,
 )
 
@@ -903,8 +903,12 @@ def render_reseau_module():
                 }
                 st.session_state.pop("lc_batch_explanation", None)
 
-                for i in np.where(preds != 0)[0][:500]:
-                    log_alert(f"Import CSV - ligne {i+1}", int(preds[i]), confs[i])
+                threat_indices = np.where(preds != 0)[0][:500]
+                entries_to_log = [
+                    {"source": f"Import CSV - ligne {i+1}", "pred_class": int(preds[i]), "confidence": float(confs[i])}
+                    for i in threat_indices
+                ]
+                log_alerts_bulk(entries_to_log, domaine="reseau")
                 if n_threats > 0:
                     st.warning(f"{n_threats} alerte(s) ajoutee(s) au journal d'alertes.")
 
@@ -1646,10 +1650,11 @@ def render_transactions_module():
                 n_suspect = int((preds != 0).sum())
                 rate_tx = n_suspect / len(df_tx_batch) * 100
 
-                for i, p in enumerate(preds[:500]):
-                    if int(p) != 0:
-                        log_alert(f"Import CSV Transactions - ligne {i+1}", int(p), float(confs[i]),
-                                   domaine="transactions", class_names=TX_CLASS_NAMES)
+                entries_to_log = [
+                    {"source": f"Import CSV Transactions - ligne {i+1}", "pred_class": int(p), "confidence": float(confs[i])}
+                    for i, p in enumerate(preds[:500])
+                ]
+                log_alerts_bulk(entries_to_log, domaine="transactions", class_names=TX_CLASS_NAMES)
 
                 st.session_state.last_tx_batch = {
                     "n_total": len(df_tx_batch), "n_suspect": n_suspect, "rate": rate_tx,

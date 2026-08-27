@@ -98,7 +98,12 @@ def log_alert(source_label: str, pred_class: int, confidence: float, details: st
               domaine: str = "reseau", class_names: dict = None) -> None:
     """domaine : 'reseau' (par defaut, 4 classes) ou 'transactions' (2 classes,
     voir TRANSACTION_CLASS_NAMES). class_names permet de surcharger le mapping
-    si besoin d'un futur domaine supplementaire, sans toucher a cette fonction."""
+    si besoin d'un futur domaine supplementaire, sans toucher a cette fonction.
+
+    ATTENTION PERFORMANCE : pour journaliser plusieurs alertes d'un coup (import
+    CSV en lot), preferer log_alerts_bulk() ci-dessous - cette fonction ouvre
+    une connexion Postgres separee a CHAQUE appel, ce qui devient tres lent
+    (des centaines d'allers-retours reseau sequentiels) si appelee en boucle."""
     if pred_class == 0:
         return
     names = class_names or (TRANSACTION_CLASS_NAMES if domaine == "transactions" else CLASS_NAMES)
@@ -122,6 +127,54 @@ def log_alert(source_label: str, pred_class: int, confidence: float, details: st
         "Details": details, "Statut": "Ouvert", "Fermee_le": None,
     })
     save_org_state(state, domaine)
+
+
+def log_alerts_bulk(entries: list, domaine: str = "reseau", class_names: dict = None) -> int:
+    """Journalise PLUSIEURS alertes en une seule connexion/transaction Postgres
+    (au lieu d'une connexion par alerte comme le ferait un appel repete a
+    log_alert) - essentiel pour la performance d'un import CSV en lot, ou
+    des centaines de menaces peuvent etre detectees d'un coup.
+
+    entries : liste de dicts {"source": str, "pred_class": int, "confidence": float,
+    "details": str (optionnel)}. Les entrees avec pred_class=0 (normal/legitime)
+    sont ignorees, comme pour log_alert(). Retourne le nombre d'alertes inserees."""
+    names = class_names or (TRANSACTION_CLASS_NAMES if domaine == "transactions" else CLASS_NAMES)
+    to_insert = [e for e in entries if e["pred_class"] != 0]
+    if not to_insert:
+        return 0
+    horodatage = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    if db.database_configured():
+        db.init_schema()
+        with db.get_connection() as conn:
+            with conn.cursor() as cur:
+                # executemany : une seule connexion/transaction pour tout le lot,
+                # au lieu d'une connexion par alerte - le vrai gain de performance.
+                cur.executemany(
+                    "INSERT INTO alerts (id, domaine, horodatage, source, menace, confiance, details, statut, fermee_le) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    [
+                        (str(uuid.uuid4())[:8], domaine, horodatage, e["source"], names[e["pred_class"]],
+                         round(e["confidence"], 1), e.get("details", ""), "Ouvert", None)
+                        for e in to_insert
+                    ],
+                )
+        return len(to_insert)
+
+    # Repli JSON : une seule lecture/ecriture pour tout le lot (au lieu d'une
+    # lecture/ecriture par alerte).
+    state = load_org_state(domaine)
+    new_entries = [
+        {
+            "ID": str(uuid.uuid4())[:8], "Horodatage": horodatage, "Source": e["source"],
+            "Menace": names[e["pred_class"]], "Confiance (%)": round(e["confidence"], 1),
+            "Details": e.get("details", ""), "Statut": "Ouvert", "Fermee_le": None,
+        }
+        for e in to_insert
+    ]
+    state.setdefault("alert_log", [])[:0] = new_entries  # insertion en tete, ordre du lot preserve
+    save_org_state(state, domaine)
+    return len(to_insert)
 
 
 def toggle_alert_status(alert_id: str, domaine: str = "reseau") -> bool:
