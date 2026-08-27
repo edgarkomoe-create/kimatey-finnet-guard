@@ -100,3 +100,12 @@
   border-radius: 6px; padding: .3rem .7rem; font-size: .76rem; cursor: pointer; transition: all .15s ease;
 }
 .alert-toggle-btn:hover { border-color: var(--teal); color: var(--teal); }
+
+/* ---- Commentaire IA (Lieutenant Cyber) ---- */
+.ai-comment {
+  margin-top: .8rem; padding: 1rem 1.2rem; border-radius: 10px;
+  background: rgba(0,212,181,0.08); border-left: 4px solid var(--teal);
+  font-size: .92rem; line-height: 1.6; color: var(--text-light); display: none;
+  animation: fade-in-up .35s ease-out;
+}
+.ai-comment.visible { display: block; }

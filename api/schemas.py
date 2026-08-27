@@ -270,6 +270,15 @@ class ToggleAlertResponse(BaseModel):
     dashboard: SocDashboardResponse
 
 
+class DashboardCommentRequest(BaseModel):
+    mode: str = Field(..., description="'executive' (langage decideur, sans jargon) ou 'analyst' (technique)")
+
+
+class DashboardCommentResponse(BaseModel):
+    mode: str
+    commentaire: str
+
+
 # ---------------------------------------------------------------- Sensibilisation ludique (fusion gamification)
 class GameScenarioOut(BaseModel):
     situation: str

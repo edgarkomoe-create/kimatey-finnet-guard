@@ -228,6 +228,43 @@ function renderTechnicalView(data) {
 }
 
 // ==========================================================================
+// Commentaire IA (Lieutenant Cyber) - persona executif ou analyste, meme
+// endpoint /organisation/dashboard_soc/commentaire selon le mode.
+// ==========================================================================
+async function requestComment(mode, buttonEl, targetEl) {
+  buttonEl.disabled = true;
+  const originalText = buttonEl.textContent;
+  buttonEl.textContent = "Reflexion en cours...";
+  try {
+    const r = await fetch(API_BASE_URL + "/organisation/dashboard_soc/commentaire", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify({ mode }),
+    });
+    if (!r.ok) {
+      const body = await r.json().catch(() => ({}));
+      targetEl.textContent = body.detail || "Une erreur est survenue.";
+    } else {
+      const body = await r.json();
+      targetEl.textContent = "🎖️ " + body.commentaire;
+    }
+    targetEl.classList.add("visible");
+  } catch (e) {
+    targetEl.textContent = "Impossible de contacter le serveur.";
+    targetEl.classList.add("visible");
+  }
+  buttonEl.disabled = false;
+  buttonEl.textContent = originalText;
+}
+
+document.getElementById("btn-comment-executive").addEventListener("click", (e) => {
+  requestComment("executive", e.target, document.getElementById("comment-executive"));
+});
+document.getElementById("btn-comment-analyst").addEventListener("click", (e) => {
+  requestComment("analyst", e.target, document.getElementById("comment-technique"));
+});
+
+// ==========================================================================
 // Demarrage
 // ==========================================================================
 if (getToken()) {

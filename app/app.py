@@ -633,9 +633,9 @@ def render_organisation_view():
 
 
 def render_reseau_module():
-    tab_simple, tab_dashboard, tab_import, tab_predict, tab_live, tab_alerts = st.tabs(
+    tab_simple, tab_dashboard, tab_import, tab_predict, tab_live, tab_alerts, tab_viz = st.tabs(
         ["👔 Resume simple", "📊 Tableau de bord", "📁 Analyser un fichier de logs", "🔎 Verifier un flux unique",
-         "🔴 Surveillance en direct", "🚨 Alertes detectees"]
+         "🔴 Surveillance en direct", "🚨 Alertes detectees", "📈 Visualisation"]
     )
 
     # ---------------------------------------------------------------- Tab 0 : Resume simple (non-technique)
@@ -1310,6 +1310,22 @@ def render_reseau_module():
             if c2.button("Vider le journal"):
                 save_org_state({"alert_log": [], "score_history": org_state.get("score_history", [])})
                 st.rerun()
+
+    # ---------------------------------------------------------------- Tab 7 : Visualisation (renvoi vers le web)
+    with tab_viz:
+        st.markdown("### 📈 Dashboard visuel anime")
+        st.write(
+            "Retrouvez ce meme tableau de bord (score, alertes, tendances) dans une version web "
+            "**interactive et animee** (jauge circulaire, courbes Chart.js) - memes donnees, "
+            "presentation plus riche. Connectez-vous avec le meme compte."
+        )
+        st.link_button("Ouvrir le Dashboard Visuel →", "https://kimatey-finnet-guard.vercel.app/dashboard.html",
+                        type="primary", use_container_width=False)
+        st.caption(
+            "ℹ️ Cette version web anime couvre pour l'instant uniquement la Securite Reseau. "
+            "Les modules Fraude Transactionnelle et Espace Academique restent consultables ici, "
+            "sur Streamlit uniquement, pour le moment."
+        )
 
 
 

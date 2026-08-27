@@ -37,6 +37,7 @@ from api.schemas import (
     TransactionIn, TransactionPredictionResponse, TransactionBatchSummary,
     PassInfo, ActivePassResponse, SouscrirePassRequest, SensitivityResponse, SetSensitivityRequest,
     EnrichedModelStatus, AlertOut, SocDashboardResponse, ToggleAlertResponse,
+    DashboardCommentRequest, DashboardCommentResponse,
 )
 from api.transaction_model_service import get_transaction_model_service
 from core.pass_system import (
@@ -55,8 +56,8 @@ from api.auth import (
 )
 from core.kimatey_core import (
     GENAI_AVAILABLE, genai, genai_types, ask_gemini, ASSISTANT_SYSTEM_PROMPT, ANONYMIZE_SYSTEM_PROMPT,
-    ORG_ANALYST_SYSTEM_PROMPT, SCENARIOS, REPORT_STEPS, GAME_CATEGORIES, GAME_MASCOTS, LEVELS, BADGES,
-    XP_PER_CORRECT, XP_PER_INCORRECT, MAX_HEARTS,
+    ORG_ANALYST_SYSTEM_PROMPT, ORG_EXECUTIVE_SYSTEM_PROMPT, SCENARIOS, REPORT_STEPS, GAME_CATEGORIES,
+    GAME_MASCOTS, LEVELS, BADGES, XP_PER_CORRECT, XP_PER_INCORRECT, MAX_HEARTS,
 )
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -817,3 +818,35 @@ def organisation_dashboard_soc():
 def organisation_dashboard_toggle(alert_id: str):
     found = toggle_alert_status(alert_id)
     return ToggleAlertResponse(found=found, dashboard=_build_soc_dashboard())
+
+
+@app.post(
+    "/organisation/dashboard_soc/commentaire", response_model=DashboardCommentResponse, tags=["Organisation"],
+    summary="Genere un commentaire IA (persona decideur ou analyste) sur l'etat actuel du dashboard",
+    dependencies=[Depends(require_org_auth)],
+)
+def organisation_dashboard_commentaire(payload: DashboardCommentRequest):
+    if payload.mode not in ("executive", "analyst"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="mode doit etre 'executive' ou 'analyst'")
+    client = _get_gemini_client_or_503()
+    dashboard = _build_soc_dashboard()
+    prompt_system = ORG_EXECUTIVE_SYSTEM_PROMPT if payload.mode == "executive" else ORG_ANALYST_SYSTEM_PROMPT
+
+    if payload.mode == "executive":
+        categories = list({a.Menace for a in dashboard.alerts if a.Statut == "Ouvert"})
+        content = (
+            f"Score de securite actuel : {dashboard.score}/100. {dashboard.n_open} situation(s) encore "
+            f"non traitee(s) sur {dashboard.n_open + dashboard.n_closed} au total. Categories concernees "
+            f"par les situations non traitees : {categories if categories else 'aucune'}."
+        )
+    else:
+        content = (
+            f"Score de securite : {dashboard.score}/100. Alertes ouvertes : {dashboard.n_open}, "
+            f"fermees : {dashboard.n_closed} (taux de traitement {dashboard.treated_rate_pct}%). "
+            f"Repartition par gravite : {dashboard.severity_breakdown}. "
+            f"MTTR : {dashboard.mttr_hours if dashboard.mttr_hours is not None else 'non disponible'} heures. "
+            f"Tendance 7 jours : {dashboard.trend_text}."
+        )
+
+    commentaire = ask_gemini(client, content, system_instruction=prompt_system, cache=_GEMINI_CACHE)
+    return DashboardCommentResponse(mode=payload.mode, commentaire=commentaire)
