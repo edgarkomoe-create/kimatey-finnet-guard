@@ -209,6 +209,7 @@ function renderTechnicalView(data) {
       datasets: [{ data: [data.n_open, data.n_closed], backgroundColor: ["#e74c3c", "#22c55e"], borderColor: "#132C53", borderWidth: 3 }],
     },
     options: {
+      responsive: true, maintainAspectRatio: false,
       animation: { duration: 900, easing: "easeOutQuart" },
       plugins: { legend: { position: "bottom", labels: { color: "#9FB3CC", font: { size: 11 } } } },
     },
@@ -225,6 +226,7 @@ function renderTechnicalView(data) {
       datasets: [{ data: sevValues, backgroundColor: sevLabels.map((l) => SEVERITY_COLORS[l] || "#00D4B5"), borderRadius: 6 }],
     },
     options: {
+      responsive: true, maintainAspectRatio: false,
       animation: { duration: 900, easing: "easeOutQuart" },
       plugins: { legend: { display: false } },
       scales: {
@@ -257,6 +259,7 @@ function renderTimelineChart(daySeveritySeries) {
     type: "line",
     data: { labels: days, datasets },
     options: {
+      responsive: true, maintainAspectRatio: false,
       animation: { duration: 1000, easing: "easeOutQuart" },
       plugins: { legend: { labels: { color: "#9FB3CC", font: { size: 11 } } } },
       scales: {

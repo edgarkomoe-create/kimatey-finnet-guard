@@ -90,6 +90,7 @@
 @media (max-width: 900px) { .chart-grid, .chart-grid-3 { grid-template-columns: 1fr; } }
 .chart-card { background: var(--navy-light); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1.2rem; }
 .chart-title { font-size: .9rem; font-weight: 700; margin: 0 0 .8rem 0; color: var(--text-light); }
+.chart-card canvas { max-height: 280px; }
 
 .date-filter-row { display: flex; align-items: center; gap: .8rem; margin-bottom: 1rem; flex-wrap: wrap; font-size: .82rem; color: var(--text-muted); }
 .date-filter-row input[type=date] {
