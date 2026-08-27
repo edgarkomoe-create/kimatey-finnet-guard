@@ -302,15 +302,20 @@ def plotly_dark_layout(fig, title=None, height=340):
     """Applique le theme sombre navy/teal a une figure Plotly (equivalent
     interactif de style_dark_fig pour matplotlib) : survol, zoom, panoramique
     fonctionnent nativement, contrairement a une image matplotlib statique."""
-    fig.update_layout(
+    layout_kwargs = dict(
         paper_bgcolor=NAVY_LIGHT, plot_bgcolor=NAVY_LIGHT,
         font=dict(color=TEXT_LIGHT, size=12),
-        title=dict(text=title, font=dict(color=TEXT_LIGHT, size=13)) if title else None,
         margin=dict(l=10, r=10, t=40 if title else 10, b=10),
         height=height,
         legend=dict(bgcolor=NAVY_MID, bordercolor=GRID_COLOR, borderwidth=1, font=dict(color=TEXT_LIGHT, size=10)),
         hoverlabel=dict(bgcolor=NAVY_MID, font_color=TEXT_LIGHT, bordercolor=TEAL),
     )
+    # IMPORTANT : ne jamais passer title=None explicitement a update_layout - Plotly.js
+    # (cote navigateur) affiche alors litteralement le texte "undefined" au lieu de ne
+    # rien afficher. On omet completement la cle si aucun titre n'est fourni.
+    if title:
+        layout_kwargs["title"] = dict(text=title, font=dict(color=TEXT_LIGHT, size=13))
+    fig.update_layout(**layout_kwargs)
     fig.update_xaxes(gridcolor=GRID_COLOR, zerolinecolor=GRID_COLOR, color=TEXT_LIGHT, tickfont=dict(size=10))
     fig.update_yaxes(gridcolor=GRID_COLOR, zerolinecolor=GRID_COLOR, color=TEXT_LIGHT, tickfont=dict(size=10))
     return fig
@@ -650,12 +655,6 @@ def render_reseau_module():
         score_simple = compute_security_score(alert_log_simple)
         n_open_simple = len([a for a in alert_log_simple if a.get("Statut", "Ouvert") == "Ouvert"])
 
-        PLAIN_LANGUAGE = {
-            "Scan de Ports / Reconnaissance": "une exploration suspecte de votre reseau",
-            "Attaque DDoS / Volumetrique": "une tentative de surcharge de votre systeme",
-            "Infiltration / Brute-Force / Exfiltration": "une tentative d'intrusion grave",
-        }
-
         if score_simple >= 70:
             banner_color, banner_bg = GREEN, "rgba(34,197,94,0.12)"
             banner_text = "🟢 Votre reseau est actuellement bien protege"
@@ -666,24 +665,62 @@ def render_reseau_module():
             banner_color, banner_bg = RED, "rgba(231,76,60,0.12)"
             banner_text = "🔴 Une attention immediate est necessaire"
 
-        st.markdown(
-            f'<div style="background:{banner_bg};border-left:5px solid {banner_color};'
-            f'border-radius:10px;padding:1.4rem 1.6rem;margin-bottom:1.2rem;">'
-            f'<div style="font-size:1.3rem;font-weight:700;color:{banner_color};">{banner_text}</div>'
-            f'</div>', unsafe_allow_html=True,
-        )
+        # ---- Jauge circulaire simple (statique, calculee cote serveur) : un visuel
+        # immediatement comprehensible sans axe, legende ni jargon - contrairement aux
+        # graphiques techniques (barres, courbes) reserves a l'onglet Alertes detectees. ----
+        circumference = 327  # 2 * pi * rayon(52)
+        offset = circumference - (score_simple / 100) * circumference
+        gauge_col1, gauge_col2 = st.columns([1, 2])
+        with gauge_col1:
+            st.markdown(
+                f'''<div style="position:relative;width:150px;height:150px;margin:0 auto;">
+                <svg viewBox="0 0 120 120" style="width:100%;height:100%;transform:rotate(-90deg);">
+                  <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="10"/>
+                  <circle cx="60" cy="60" r="52" fill="none" stroke="{banner_color}" stroke-width="10"
+                          stroke-linecap="round" stroke-dasharray="{circumference}" stroke-dashoffset="{offset}"/>
+                </svg>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+                     font-size:1.8rem;font-weight:700;color:{banner_color};">{score_simple}</div>
+                </div>''',
+                unsafe_allow_html=True,
+            )
+        with gauge_col2:
+            st.markdown(
+                f'<div style="background:{banner_bg};border-left:5px solid {banner_color};'
+                f'border-radius:10px;padding:1.4rem 1.6rem;height:100%;display:flex;align-items:center;">'
+                f'<div style="font-size:1.3rem;font-weight:700;color:{banner_color};">{banner_text}</div>'
+                f'</div>', unsafe_allow_html=True,
+            )
 
+        st.markdown("<br>", unsafe_allow_html=True)
         if not alert_log_simple:
             st.write("Aucune alerte enregistree pour le moment. Le systeme surveille en continu.")
         else:
             open_alerts_simple = [a for a in alert_log_simple if a.get("Statut", "Ouvert") == "Ouvert"]
             if open_alerts_simple:
-                categories_presentes = {a["Menace"] for a in open_alerts_simple}
-                phrases = [PLAIN_LANGUAGE.get(c, "une activite inhabituelle") for c in categories_presentes]
-                st.write(
-                    f"**{len(open_alerts_simple)} situation(s)** demande(nt) encore votre attention : "
-                    + ", ".join(phrases) + "."
-                )
+                # ---- Pastilles de gravite en grosses icones (pas de barres/axes techniques) ----
+                counts_by_category = {}
+                for a in open_alerts_simple:
+                    counts_by_category[a["Menace"]] = counts_by_category.get(a["Menace"], 0) + 1
+                BADGE_STYLE = {
+                    "Scan de Ports / Reconnaissance": ("🟠", "exploration suspecte", "#f5a524"),
+                    "Attaque DDoS / Volumetrique": ("🔴", "tentative de surcharge", "#e74c3c"),
+                    "Infiltration / Brute-Force / Exfiltration": ("🟣", "intrusion grave", "#8e44ad"),
+                }
+                badge_cols = st.columns(len(counts_by_category))
+                for i, (cat, count) in enumerate(counts_by_category.items()):
+                    icon, label, color = BADGE_STYLE.get(cat, ("⚪", "activite inhabituelle", TEAL))
+                    with badge_cols[i]:
+                        st.markdown(
+                            f'<div style="background:{color}18;border:1px solid {color}55;border-radius:12px;'
+                            f'padding:1rem;text-align:center;">'
+                            f'<div style="font-size:2rem;">{icon}</div>'
+                            f'<div style="font-size:1.6rem;font-weight:700;color:{color};">{count}</div>'
+                            f'<div style="font-size:.8rem;color:var(--text-muted,#9fb3d1);">{label}</div>'
+                            f'</div>', unsafe_allow_html=True,
+                        )
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.write(f"**{len(open_alerts_simple)} situation(s)** demande(nt) encore votre attention.")
             else:
                 st.write("Toutes les alertes recentes ont ete traitees. Rien ne demande votre attention pour l'instant.")
 
@@ -914,6 +951,7 @@ def render_reseau_module():
                             line=dict(color=TEAL, width=2), marker=dict(size=7, color=TEAL),
                         )])
                         fig.update_yaxes(title="Menaces detectees")
+                        fig.update_xaxes(type="category")  # meme correctif que la chronologie multi-gravite
                         plotly_dark_layout(fig, height=320)
                         st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
                     except (ValueError, TypeError):
@@ -1232,6 +1270,11 @@ def render_reseau_module():
                         line=dict(color=colors_map.get(menace, TEAL), width=2), marker=dict(size=6),
                     ))
                 fig.update_yaxes(title="Nombre d'alertes")
+                # IMPORTANT : force l'axe en mode categoriel (pas "date") - avec peu de jours
+                # distincts (ex: toutes les alertes du meme jour), Plotly detecte ces chaines
+                # comme un axe temporel continu et zoome jusqu'a la nanoseconde, rendant le
+                # graphique illisible. En categoriel, chaque jour est un point discret, fiable.
+                fig.update_xaxes(type="category")
                 plotly_dark_layout(fig, height=380)
                 st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
         else:
