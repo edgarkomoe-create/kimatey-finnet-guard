@@ -18,20 +18,25 @@ from pathlib import Path
 from core import db
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-ORG_STATE_FILE = BASE_DIR / "outputs" / "organisation_state.json"
 
 CLASS_NAMES = {0: "Normal / Legitime", 1: "Scan de Ports / Reconnaissance",
                2: "Attaque DDoS / Volumetrique", 3: "Infiltration / Brute-Force / Exfiltration"}
+TRANSACTION_CLASS_NAMES = {0: "Legitime", 1: "Suspecte"}
 SEVERITY_WEIGHT = {1: 1, 2: 2, 3: 3}  # 1=scan (faible), 2=DDoS (eleve), 3=infiltration (critique)
 
 
-def _load_org_state_pg() -> dict:
+def _state_file(domaine: str) -> Path:
+    suffix = "" if domaine == "reseau" else f"_{domaine}"
+    return BASE_DIR / "outputs" / f"organisation_state{suffix}.json"
+
+
+def _load_org_state_pg(domaine: str) -> dict:
     db.init_schema()
     with db.get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT id, horodatage, source, menace, confiance, details, statut, fermee_le "
-                "FROM alerts ORDER BY seq DESC"
+                "FROM alerts WHERE domaine = %s ORDER BY seq DESC", (domaine,)
             )
             alert_log = [
                 {
@@ -40,56 +45,63 @@ def _load_org_state_pg() -> dict:
                 }
                 for row in cur.fetchall()
             ]
-            cur.execute("SELECT horodatage, score FROM score_history ORDER BY seq ASC")
+            cur.execute("SELECT horodatage, score FROM score_history WHERE domaine = %s ORDER BY seq ASC", (domaine,))
             score_history = [{"Horodatage": row[0], "Score": row[1]} for row in cur.fetchall()]
     return {"alert_log": alert_log, "score_history": score_history}
 
 
-def _save_org_state_pg(state: dict) -> None:
-    """Remplacement complet (delete + reinsert) - simple et correct a l'echelle
-    d'une demo (quelques centaines d'alertes au plus), evite une logique de
-    diff plus complexe."""
+def _save_org_state_pg(state: dict, domaine: str) -> None:
+    """Remplacement complet (delete + reinsert), limite au domaine concerne -
+    simple et correct a l'echelle d'une demo, evite une logique de diff plus
+    complexe. N'affecte jamais les alertes d'un autre domaine."""
     db.init_schema()
     with db.get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM alerts")
+            cur.execute("DELETE FROM alerts WHERE domaine = %s", (domaine,))
             for entry in reversed(state.get("alert_log", [])):  # reversed : le plus ancien insere en premier
                 cur.execute(
-                    "INSERT INTO alerts (id, horodatage, source, menace, confiance, details, statut, fermee_le) "
-                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-                    (entry["ID"], entry["Horodatage"], entry.get("Source"), entry.get("Menace"),
+                    "INSERT INTO alerts (id, domaine, horodatage, source, menace, confiance, details, statut, fermee_le) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    (entry["ID"], domaine, entry["Horodatage"], entry.get("Source"), entry.get("Menace"),
                      entry.get("Confiance (%)"), entry.get("Details", ""), entry.get("Statut", "Ouvert"),
                      entry.get("Fermee_le")),
                 )
-            cur.execute("DELETE FROM score_history")
+            cur.execute("DELETE FROM score_history WHERE domaine = %s", (domaine,))
             for entry in state.get("score_history", []):
                 cur.execute(
-                    "INSERT INTO score_history (horodatage, score) VALUES (%s, %s)",
-                    (entry["Horodatage"], entry["Score"]),
+                    "INSERT INTO score_history (domaine, horodatage, score) VALUES (%s, %s, %s)",
+                    (domaine, entry["Horodatage"], entry["Score"]),
                 )
 
 
-def load_org_state() -> dict:
+def load_org_state(domaine: str = "reseau") -> dict:
     if db.database_configured():
-        return _load_org_state_pg()
-    if ORG_STATE_FILE.exists():
-        with open(ORG_STATE_FILE) as f:
+        return _load_org_state_pg(domaine)
+    state_file = _state_file(domaine)
+    if state_file.exists():
+        with open(state_file) as f:
             return json.load(f)
     return {"alert_log": [], "score_history": []}
 
 
-def save_org_state(state: dict) -> None:
+def save_org_state(state: dict, domaine: str = "reseau") -> None:
     if db.database_configured():
-        _save_org_state_pg(state)
+        _save_org_state_pg(state, domaine)
         return
-    ORG_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(ORG_STATE_FILE, "w") as f:
+    state_file = _state_file(domaine)
+    state_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(state_file, "w") as f:
         json.dump(state, f, indent=2, ensure_ascii=False)
 
 
-def log_alert(source_label: str, pred_class: int, confidence: float, details: str = "") -> None:
+def log_alert(source_label: str, pred_class: int, confidence: float, details: str = "",
+              domaine: str = "reseau", class_names: dict = None) -> None:
+    """domaine : 'reseau' (par defaut, 4 classes) ou 'transactions' (2 classes,
+    voir TRANSACTION_CLASS_NAMES). class_names permet de surcharger le mapping
+    si besoin d'un futur domaine supplementaire, sans toucher a cette fonction."""
     if pred_class == 0:
         return
+    names = class_names or (TRANSACTION_CLASS_NAMES if domaine == "transactions" else CLASS_NAMES)
     entry_id = str(uuid.uuid4())[:8]
     horodatage = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     if db.database_configured():
@@ -97,28 +109,28 @@ def log_alert(source_label: str, pred_class: int, confidence: float, details: st
         with db.get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "INSERT INTO alerts (id, horodatage, source, menace, confiance, details, statut, fermee_le) "
-                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-                    (entry_id, horodatage, source_label, CLASS_NAMES[pred_class], round(confidence, 1),
+                    "INSERT INTO alerts (id, domaine, horodatage, source, menace, confiance, details, statut, fermee_le) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    (entry_id, domaine, horodatage, source_label, names[pred_class], round(confidence, 1),
                      details, "Ouvert", None),
                 )
         return
-    state = load_org_state()
+    state = load_org_state(domaine)
     state.setdefault("alert_log", []).insert(0, {
         "ID": entry_id, "Horodatage": horodatage, "Source": source_label,
-        "Menace": CLASS_NAMES[pred_class], "Confiance (%)": round(confidence, 1),
+        "Menace": names[pred_class], "Confiance (%)": round(confidence, 1),
         "Details": details, "Statut": "Ouvert", "Fermee_le": None,
     })
-    save_org_state(state)
+    save_org_state(state, domaine)
 
 
-def toggle_alert_status(alert_id: str) -> bool:
+def toggle_alert_status(alert_id: str, domaine: str = "reseau") -> bool:
     """Bascule Ouvert <-> Ferme pour une alerte precise. Retourne True si trouvee."""
     if db.database_configured():
         db.init_schema()
         with db.get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT statut FROM alerts WHERE id = %s", (alert_id,))
+                cur.execute("SELECT statut FROM alerts WHERE id = %s AND domaine = %s", (alert_id, domaine))
                 row = cur.fetchone()
                 if not row:
                     return False
@@ -126,12 +138,12 @@ def toggle_alert_status(alert_id: str) -> bool:
                 new_statut = "Ferme" if is_open else "Ouvert"
                 new_fermee_le = datetime.now().strftime("%Y-%m-%d %H:%M:%S") if is_open else None
                 cur.execute(
-                    "UPDATE alerts SET statut = %s, fermee_le = %s WHERE id = %s",
-                    (new_statut, new_fermee_le, alert_id),
+                    "UPDATE alerts SET statut = %s, fermee_le = %s WHERE id = %s AND domaine = %s",
+                    (new_statut, new_fermee_le, alert_id, domaine),
                 )
         return True
 
-    state = load_org_state()
+    state = load_org_state(domaine)
     found = False
     for a in state.get("alert_log", []):
         if a["ID"] == alert_id:
@@ -140,19 +152,22 @@ def toggle_alert_status(alert_id: str) -> bool:
             a["Fermee_le"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S") if is_open else None
             found = True
     if found:
-        save_org_state(state)
+        save_org_state(state, domaine)
     return found
 
 
 def compute_security_score(alert_log: list) -> int:
     """Score composite /100 : penalise le trafic recent selon sa gravite ponderee.
     100 = aucune menace ouverte recemment ; descend selon le volume et la gravite
-    des alertes encore ouvertes (une alerte fermee ne penalise plus le score)."""
+    des alertes encore ouvertes (une alerte fermee ne penalise plus le score).
+    Fonctionne pour les deux domaines : pour les transactions (2 classes), tout
+    poids inconnu retombe sur 1 (severite uniforme, coherent avec un modele
+    binaire Legitime/Suspecte sans sous-categories de gravite)."""
     open_alerts = [a for a in alert_log if a.get("Statut", "Ouvert") == "Ouvert"]
     if not open_alerts:
         return 100
     weight_map = {"Scan de Ports / Reconnaissance": 1, "Attaque DDoS / Volumetrique": 2,
-                  "Infiltration / Brute-Force / Exfiltration": 3}
+                  "Infiltration / Brute-Force / Exfiltration": 3, "Suspecte": 2}
     total_weight = sum(weight_map.get(a["Menace"], 1) for a in open_alerts)
     avg_severity = total_weight / len(open_alerts)  # 1 a 3
     volume_penalty = min(40, len(open_alerts) * 0.5)
@@ -160,25 +175,28 @@ def compute_security_score(alert_log: list) -> int:
     return max(0, round(100 - volume_penalty - severity_penalty))
 
 
-def record_score_snapshot(score: int) -> dict:
+def record_score_snapshot(score: int, domaine: str = "reseau") -> dict:
     horodatage = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     if db.database_configured():
         db.init_schema()
         with db.get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute("INSERT INTO score_history (horodatage, score) VALUES (%s, %s)", (horodatage, score))
-                # Garde uniquement les 50 derniers points (coherent avec le comportement JSON)
+                cur.execute(
+                    "INSERT INTO score_history (domaine, horodatage, score) VALUES (%s, %s, %s)",
+                    (domaine, horodatage, score),
+                )
+                # Garde uniquement les 50 derniers points par domaine (coherent avec le comportement JSON)
                 cur.execute("""
-                    DELETE FROM score_history WHERE seq NOT IN (
-                        SELECT seq FROM score_history ORDER BY seq DESC LIMIT 50
+                    DELETE FROM score_history WHERE domaine = %s AND seq NOT IN (
+                        SELECT seq FROM score_history WHERE domaine = %s ORDER BY seq DESC LIMIT 50
                     )
-                """)
-        return load_org_state()
+                """, (domaine, domaine))
+        return load_org_state(domaine)
 
-    state = load_org_state()
+    state = load_org_state(domaine)
     state.setdefault("score_history", []).append({"Horodatage": horodatage, "Score": score})
     state["score_history"] = state["score_history"][-50:]
-    save_org_state(state)
+    save_org_state(state, domaine)
     return state
 
 

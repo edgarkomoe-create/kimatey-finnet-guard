@@ -272,6 +272,7 @@ class ToggleAlertResponse(BaseModel):
 
 class DashboardCommentRequest(BaseModel):
     mode: str = Field(..., description="'executive' (langage decideur, sans jargon) ou 'analyst' (technique)")
+    domaine: str = Field("reseau", description="'reseau' (Securite Reseau) ou 'transactions' (Fraude Transactionnelle)")
 
 
 class DashboardCommentResponse(BaseModel):

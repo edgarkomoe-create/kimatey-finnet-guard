@@ -346,12 +346,12 @@ def predict_with_confidence(df_raw):
 # ------------------------------------------------------------------------
 from core.alert_log import (
     load_org_state, save_org_state, log_alert as _log_alert_shared,
-    compute_security_score, record_score_snapshot, mttr_hours, trend_delta_pct,
+    compute_security_score, record_score_snapshot, mttr_hours, trend_delta_pct, toggle_alert_status,
 )
 
 
-def log_alert(source_label, pred_class, confidence, details=""):
-    _log_alert_shared(source_label, pred_class, confidence, details)
+def log_alert(source_label, pred_class, confidence, details="", domaine="reseau", class_names=None):
+    _log_alert_shared(source_label, pred_class, confidence, details, domaine=domaine, class_names=class_names)
 
 
 @st.cache_data(show_spinner=False)
@@ -1582,6 +1582,41 @@ def render_transactions_module():
         k3.markdown(kpi_card("📈", "AUC", f"{tx_info['auc']*100:.1f}%", level="neutral"), unsafe_allow_html=True)
 
         st.markdown("---")
+        st.subheader("Etat operationnel (transactions)")
+        tx_org_state = load_org_state(domaine="transactions")
+        tx_alert_log = tx_org_state.get("alert_log", [])
+        tx_score = compute_security_score(tx_alert_log)
+        record_score_snapshot(tx_score, domaine="transactions")
+        tx_n_open = len([a for a in tx_alert_log if a.get("Statut", "Ouvert") == "Ouvert"])
+        tx_n_closed = len(tx_alert_log) - tx_n_open
+        tx_treated_rate = round(100 * tx_n_closed / len(tx_alert_log)) if tx_alert_log else 0
+        tx_score_level = "good" if tx_score >= 70 else ("warn" if tx_score >= 40 else "threat")
+
+        tk1, tk2, tk3 = st.columns(3)
+        tk1.markdown(kpi_card("🛡️", "Score de securite (transactions)", f"{tx_score}/100", level=tx_score_level,
+                               sub="Penalise selon volume et gravite des transactions encore ouvertes"), unsafe_allow_html=True)
+        tk2.markdown(kpi_card("🚨", "Transactions suspectes ouvertes", str(tx_n_open),
+                               level=("threat" if tx_n_open > 0 else "good"),
+                               sub=f"{tx_n_closed} deja traitees"), unsafe_allow_html=True)
+        tk3.markdown(kpi_card("✅", "Taux de traitement", f"{tx_treated_rate}%", level="neutral"), unsafe_allow_html=True)
+
+        if tx_alert_log:
+            with st.expander("📋 Journal des transactions suspectes"):
+                for alert in tx_alert_log[:50]:
+                    is_open = alert.get("Statut", "Ouvert") == "Ouvert"
+                    icon = "🔴" if is_open else "🟢"
+                    cols = st.columns([1, 2, 2, 2, 1, 2])
+                    cols[0].markdown(f"{icon} **{alert.get('Statut', 'Ouvert')}**")
+                    cols[1].write(alert["Horodatage"])
+                    cols[2].write(alert["Source"])
+                    cols[3].write(alert["Menace"])
+                    cols[4].write(f"{alert['Confiance (%)']}%")
+                    btn_label = "Marquer traitee" if is_open else "Rouvrir"
+                    if cols[5].button(btn_label, key=f"tx_toggle_{alert['ID']}"):
+                        toggle_alert_status(alert["ID"], domaine="transactions")
+                        st.rerun()
+
+        st.markdown("---")
         st.subheader("Analyser un fichier de transactions (lot)")
         with st.expander("🔬 Colonnes techniques attendues dans le fichier"):
             st.write("Les colonnes manquantes seront remplacees par la valeur mediane observee a l'entrainement "
@@ -1610,6 +1645,11 @@ def render_transactions_module():
 
                 n_suspect = int((preds != 0).sum())
                 rate_tx = n_suspect / len(df_tx_batch) * 100
+
+                for i, p in enumerate(preds[:500]):
+                    if int(p) != 0:
+                        log_alert(f"Import CSV Transactions - ligne {i+1}", int(p), float(confs[i]),
+                                   domaine="transactions", class_names=TX_CLASS_NAMES)
 
                 st.session_state.last_tx_batch = {
                     "n_total": len(df_tx_batch), "n_suspect": n_suspect, "rate": rate_tx,

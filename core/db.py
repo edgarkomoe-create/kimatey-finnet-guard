@@ -64,6 +64,7 @@ def init_schema():
                 CREATE TABLE IF NOT EXISTS alerts (
                     seq SERIAL PRIMARY KEY,
                     id TEXT UNIQUE NOT NULL,
+                    domaine TEXT NOT NULL DEFAULT 'reseau',
                     horodatage TEXT NOT NULL,
                     source TEXT,
                     menace TEXT,
@@ -73,10 +74,14 @@ def init_schema():
                     fermee_le TEXT
                 )
             """)
+            # Migration douce pour les bases deja creees avant l'ajout du domaine
+            cur.execute("ALTER TABLE alerts ADD COLUMN IF NOT EXISTS domaine TEXT NOT NULL DEFAULT 'reseau'")
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS score_history (
                     seq SERIAL PRIMARY KEY,
+                    domaine TEXT NOT NULL DEFAULT 'reseau',
                     horodatage TEXT NOT NULL,
                     score INTEGER NOT NULL
                 )
             """)
+            cur.execute("ALTER TABLE score_history ADD COLUMN IF NOT EXISTS domaine TEXT NOT NULL DEFAULT 'reseau'")

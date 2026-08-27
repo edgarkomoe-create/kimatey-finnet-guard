@@ -656,6 +656,13 @@ async def predict_transaction_csv(file: UploadFile = File(..., description="CSV 
     df = pd.read_csv(file.file)
     preds, confs, probas = service.predict(df)
     n_suspect = int((preds != 0).sum())
+
+    from api.transaction_model_service import CLASS_NAMES as TX_CLASS_NAMES
+    for i, p in enumerate(preds[:500]):
+        if int(p) != 0:
+            record_alert(f"Import CSV Transactions (API) - ligne {i+1}", int(p), float(confs[i]),
+                          domaine="transactions", class_names=TX_CLASS_NAMES)
+
     return TransactionBatchSummary(
         n_total=len(df),
         n_suspectes=n_suspect,
@@ -774,8 +781,8 @@ def modele_enrichi_generer(user=Depends(require_org_auth)):
 # Streamlit existant - les deux lisent/ecrivent le meme fichier partage,
 # voir core/alert_log.py)
 # ==================================================================
-def _build_soc_dashboard() -> SocDashboardResponse:
-    state = load_org_state()
+def _build_soc_dashboard(domaine: str = "reseau") -> SocDashboardResponse:
+    state = load_org_state(domaine=domaine)
     alert_log = state.get("alert_log", [])
     n_open = len([a for a in alert_log if a.get("Statut", "Ouvert") == "Ouvert"])
     n_closed = len(alert_log) - n_open
@@ -803,21 +810,40 @@ def _build_soc_dashboard() -> SocDashboardResponse:
 
 @app.get(
     "/organisation/dashboard_soc", response_model=SocDashboardResponse, tags=["Organisation"],
-    summary="Etat operationnel complet (score, alertes, tendances) pour le dashboard SOC",
+    summary="Etat operationnel complet (score, alertes, tendances) pour le dashboard SOC - Securite Reseau",
     dependencies=[Depends(require_org_auth)],
 )
 def organisation_dashboard_soc():
-    return _build_soc_dashboard()
+    return _build_soc_dashboard(domaine="reseau")
+
+
+@app.get(
+    "/organisation/dashboard_transactions", response_model=SocDashboardResponse, tags=["Organisation"],
+    summary="Etat operationnel complet (score, alertes, tendances) pour le dashboard - Fraude Transactionnelle",
+    dependencies=[Depends(require_org_auth)],
+)
+def organisation_dashboard_transactions():
+    return _build_soc_dashboard(domaine="transactions")
 
 
 @app.post(
     "/organisation/dashboard_soc/toggle/{alert_id}", response_model=ToggleAlertResponse, tags=["Organisation"],
-    summary="Bascule le statut Ouvert/Ferme d'une alerte, retourne le dashboard mis a jour",
+    summary="Bascule le statut Ouvert/Ferme d'une alerte (Securite Reseau), retourne le dashboard mis a jour",
     dependencies=[Depends(require_org_auth)],
 )
 def organisation_dashboard_toggle(alert_id: str):
-    found = toggle_alert_status(alert_id)
-    return ToggleAlertResponse(found=found, dashboard=_build_soc_dashboard())
+    found = toggle_alert_status(alert_id, domaine="reseau")
+    return ToggleAlertResponse(found=found, dashboard=_build_soc_dashboard(domaine="reseau"))
+
+
+@app.post(
+    "/organisation/dashboard_transactions/toggle/{alert_id}", response_model=ToggleAlertResponse, tags=["Organisation"],
+    summary="Bascule le statut Ouvert/Ferme d'une transaction suspecte, retourne le dashboard mis a jour",
+    dependencies=[Depends(require_org_auth)],
+)
+def organisation_dashboard_transactions_toggle(alert_id: str):
+    found = toggle_alert_status(alert_id, domaine="transactions")
+    return ToggleAlertResponse(found=found, dashboard=_build_soc_dashboard(domaine="transactions"))
 
 
 @app.post(
@@ -828,8 +854,9 @@ def organisation_dashboard_toggle(alert_id: str):
 def organisation_dashboard_commentaire(payload: DashboardCommentRequest):
     if payload.mode not in ("executive", "analyst"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="mode doit etre 'executive' ou 'analyst'")
+    domaine = payload.domaine if payload.domaine in ("reseau", "transactions") else "reseau"
     client = _get_gemini_client_or_503()
-    dashboard = _build_soc_dashboard()
+    dashboard = _build_soc_dashboard(domaine=domaine)
     prompt_system = ORG_EXECUTIVE_SYSTEM_PROMPT if payload.mode == "executive" else ORG_ANALYST_SYSTEM_PROMPT
 
     if payload.mode == "executive":
