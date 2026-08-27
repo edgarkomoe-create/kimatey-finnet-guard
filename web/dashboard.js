@@ -5,16 +5,34 @@ const DASH_TOKEN_KEY = "kimatey_dash_token";
 const DASH_EMAIL_KEY = "kimatey_dash_email";
 let severityChart = null;
 let timelineChart = null;
+let currentDomain = "reseau"; // 'reseau' ou 'transactions'
+
+const DOMAIN_CONFIG = {
+  reseau: {
+    endpoint: "/organisation/dashboard_soc",
+    toggleEndpoint: "/organisation/dashboard_soc/toggle/",
+    eyebrow: "Securite Reseau &middot; Espace Organisation",
+    bannerGood: "🟢 Votre reseau est actuellement bien protege",
+  },
+  transactions: {
+    endpoint: "/organisation/dashboard_transactions",
+    toggleEndpoint: "/organisation/dashboard_transactions/toggle/",
+    eyebrow: "Fraude Transactionnelle &middot; Espace Organisation (Prototype)",
+    bannerGood: "🟢 Aucune transaction suspecte en attente",
+  },
+};
 
 const PLAIN_LANGUAGE = {
   "Scan de Ports / Reconnaissance": "une exploration suspecte de votre reseau",
   "Attaque DDoS / Volumetrique": "une tentative de surcharge de votre systeme",
   "Infiltration / Brute-Force / Exfiltration": "une tentative d'intrusion grave",
+  "Suspecte": "une transaction mobile money qui ressemble a une fraude",
 };
 const SEVERITY_COLORS = {
   "Scan de Ports / Reconnaissance": "#f5a524",
   "Attaque DDoS / Volumetrique": "#e74c3c",
   "Infiltration / Brute-Force / Exfiltration": "#8e44ad",
+  "Suspecte": "#e74c3c",
 };
 
 function getToken() { return localStorage.getItem(DASH_TOKEN_KEY); }
@@ -81,6 +99,19 @@ document.querySelectorAll(".view-toggle-btn").forEach((btn) => {
 });
 
 // ==========================================================================
+// Bascule domaine : Securite Reseau / Fraude Transactionnelle
+// ==========================================================================
+document.querySelectorAll(".domain-toggle-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".domain-toggle-btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentDomain = btn.dataset.domain;
+    document.getElementById("header-eyebrow").innerHTML = DOMAIN_CONFIG[currentDomain].eyebrow;
+    if (getToken()) loadDashboardData();
+  });
+});
+
+// ==========================================================================
 // Chargement + rendu du dashboard
 // ==========================================================================
 async function showDashboard() {
@@ -99,7 +130,7 @@ async function showDashboard() {
 
 async function loadDashboardData() {
   try {
-    const r = await fetch(API_BASE_URL + "/organisation/dashboard_soc", {
+    const r = await fetch(API_BASE_URL + DOMAIN_CONFIG[currentDomain].endpoint, {
       headers: { Authorization: "Bearer " + getToken() },
     });
     if (r.status === 401) { clearSession(); location.reload(); return; }
@@ -114,7 +145,7 @@ async function loadDashboardData() {
 function renderSimpleView(data) {
   const banner = document.getElementById("simple-banner");
   let color, bg, text;
-  if (data.score >= 70) { color = "#22c55e"; bg = "rgba(34,197,94,0.12)"; text = "🟢 Votre reseau est actuellement bien protege"; }
+  if (data.score >= 70) { color = "#22c55e"; bg = "rgba(34,197,94,0.12)"; text = DOMAIN_CONFIG[currentDomain].bannerGood; }
   else if (data.score >= 40) { color = "#f5a524"; bg = "rgba(245,165,36,0.12)"; text = "🟠 Une vigilance accrue est recommandee"; }
   else { color = "#e74c3c"; bg = "rgba(231,76,60,0.12)"; text = "🔴 Une attention immediate est necessaire"; }
   banner.style.borderLeftColor = color;
@@ -213,7 +244,7 @@ function renderTechnicalView(data) {
     btn.addEventListener("click", async () => {
       btn.disabled = true;
       try {
-        const r = await fetch(API_BASE_URL + "/organisation/dashboard_soc/toggle/" + btn.dataset.id, {
+        const r = await fetch(API_BASE_URL + DOMAIN_CONFIG[currentDomain].toggleEndpoint + btn.dataset.id, {
           method: "POST",
           headers: { Authorization: "Bearer " + getToken() },
         });
@@ -239,7 +270,7 @@ async function requestComment(mode, buttonEl, targetEl) {
     const r = await fetch(API_BASE_URL + "/organisation/dashboard_soc/commentaire", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-      body: JSON.stringify({ mode }),
+      body: JSON.stringify({ mode, domaine: currentDomain }),
     });
     if (!r.ok) {
       const body = await r.json().catch(() => ({}));

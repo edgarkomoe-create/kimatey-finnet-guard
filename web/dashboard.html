@@ -49,12 +49,18 @@
 
     <div class="dash-header">
       <div>
-        <p class="eyebrow">Securite Reseau &middot; Espace Organisation</p>
+        <p class="eyebrow" id="header-eyebrow">Securite Reseau &middot; Espace Organisation</p>
         <h1>Dashboard SOC</h1>
       </div>
-      <div class="view-toggle">
-        <button class="view-toggle-btn active" data-view="simple">👔 Vue simple</button>
-        <button class="view-toggle-btn" data-view="technique">🔬 Vue technique</button>
+      <div style="display:flex; flex-direction:column; gap:.6rem; align-items:flex-end;">
+        <div class="domain-toggle">
+          <button class="domain-toggle-btn active" data-domain="reseau">🌐 Securite Reseau</button>
+          <button class="domain-toggle-btn" data-domain="transactions">💰 Transactions</button>
+        </div>
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" data-view="simple">👔 Vue simple</button>
+          <button class="view-toggle-btn" data-view="technique">🔬 Vue technique</button>
+        </div>
       </div>
     </div>
 

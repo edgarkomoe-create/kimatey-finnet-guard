@@ -40,6 +40,13 @@
 }
 .view-toggle-btn.active { background: var(--teal); color: #06231d; font-weight: 700; }
 
+.domain-toggle { display: flex; gap: .5rem; background: var(--navy-light); border-radius: 999px; padding: .3rem; }
+.domain-toggle-btn {
+  background: transparent; border: none; color: var(--text-muted); padding: .45rem .9rem; border-radius: 999px;
+  cursor: pointer; font-size: .8rem; transition: all .2s ease;
+}
+.domain-toggle-btn.active { background: rgba(0,212,181,0.18); color: var(--teal); font-weight: 700; border: 1px solid var(--teal); }
+
 /* ---- Vue simple ---- */
 .simple-banner {
   padding: 1.4rem 1.6rem; border-radius: 12px; border-left: 5px solid var(--teal);
