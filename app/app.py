@@ -22,9 +22,6 @@ import joblib
 import numpy as np
 import pandas as pd
 import streamlit as st
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -277,25 +274,6 @@ def plain_result_box(pred_class, confidence):
         f'Categorie technique : {CLASS_ICONS[pred_class]} {CLASS_NAMES[pred_class]}</div>'
         f'</div>'
     )
-
-
-def style_dark_fig(fig, ax):
-    """Applique le theme sombre navy/teal a une figure matplotlib."""
-    fig.patch.set_facecolor(NAVY_LIGHT)
-    ax.set_facecolor(NAVY_LIGHT)
-    ax.tick_params(colors=TEXT_LIGHT, labelsize=8)
-    ax.xaxis.label.set_color(TEXT_LIGHT)
-    ax.yaxis.label.set_color(TEXT_LIGHT)
-    ax.title.set_color(TEXT_LIGHT)
-    for spine in ax.spines.values():
-        spine.set_color(GRID_COLOR)
-    ax.grid(color=GRID_COLOR, linewidth=0.5, alpha=0.6)
-    legend = ax.get_legend()
-    if legend is not None:
-        legend.get_frame().set_facecolor(NAVY_MID)
-        legend.get_frame().set_edgecolor(GRID_COLOR)
-        for text in legend.get_texts():
-            text.set_color(TEXT_LIGHT)
 
 
 def plotly_dark_layout(fig, title=None, height=340):

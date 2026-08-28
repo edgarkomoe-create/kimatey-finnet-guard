@@ -1,4 +1,4 @@
-# Kimatey FinNet Guard — Détection Intelligente et Supervision en Temps Réel des Attaques Réseau
+# Kimatey FinNet Guard — Plateforme Hybride de Cybersécurité et Protection Financière
 
 Projet Master 1 Informatique — UFRMI — ECUE Machine Learning
 Réalisé par : Komoe Edgar Junior
@@ -8,64 +8,80 @@ Solution destinée à sécuriser l'infrastructure réseau des fintechs, agrégat
 institutions de microfinance et administrations publiques, et à sensibiliser directement les
 citoyens contre les arnaques mobile money.
 
+**Trois espaces indépendants**, chacun avec son propre public et son propre niveau d'accès :
+
+| Espace | Public | Accès | Hébergement |
+|---|---|---|---|
+| 🏢 Organisation | Équipes IT/sécurité, fintechs, opérateurs mobile money | Compte requis | Streamlit Cloud |
+| 👥 Grand Public | Citoyens | Libre | Vercel (page web indépendante) |
+| 🎓 Académique | Enseignants, étudiants | Libre, aucun compte | Streamlit Cloud |
+
+**Deux modèles de machine learning**, même méthodologie, deux domaines :
+- **Sécurité Réseau** (validé) : Arbre de décision, 99,04 % d'exactitude, entraîné sur 50 000 flux réels
+- **Fraude Transactionnelle** (prototype) : même pipeline, entraîné sur données synthétiques clairement étiquetées
+
+**Persistance** : comptes utilisateurs et journal d'alertes sur PostgreSQL (Neon), avec repli
+automatique sur fichiers JSON si aucune base n'est configurée (voir section dédiée ci-dessous).
+
 ## Structure du projet
 
 ```
 kimatey_finnet_guard/
-├── data/                          Jeu de données (CSV, 50 000 flux)
-├── src/                           Scripts Python (Étapes 1 à 4)
+├── data/                          Jeu de données (CSV, 50 000 flux reseau)
+├── src/                           Scripts Python - pipeline ML reseau (Etapes 1 a 4)
 │   ├── eda.py                     Analyse exploratoire
-│   ├── preprocessing.py           Étape 1 : nettoyage, IQR, split, standardisation
-│   ├── utils.py                   Fonctions communes (évaluation, graphiques)
-│   ├── baseline_models.py         Étape 2 : 5 algorithmes (modèle complet)
-│   ├── feature_selection.py       Étape 3 : RFE + élagage coût-complexité
-│   ├── grid_search.py             Étape 4 : GridSearchCV (5 plis)
-│   └── regen_dashboard_figures.py Régénère les ROC/matrice de confusion en version sombre (dashboard)
-├── core/
-│   └── kimatey_core.py            Contenu partage entre Streamlit et l'API : prompts systeme Gemini,
-│                                   ask_gemini(), jeu de vigilance gamifie (categories/mascottes/
-│                                   niveaux/badges), etapes du parcours de collecte
+│   ├── preprocessing.py           Etape 1 : nettoyage, IQR, split, standardisation
+│   ├── utils.py                   Fonctions communes (evaluation, graphiques)
+│   ├── baseline_models.py         Etape 2 : 5 algorithmes (modele complet)
+│   ├── feature_selection.py       Etape 3 : RFE + elagage cout-complexite
+│   ├── grid_search.py             Etape 4 : GridSearchCV (5 plis)
+│   ├── regen_dashboard_figures.py Regenere les ROC/matrice de confusion en version sombre
+│   └── transaction_fraud/         Pipeline ML transactions (donnees synthetiques)
+│       ├── generate_synthetic_data.py
+│       └── train_pipeline.py
+├── core/                          Logique partagee entre Streamlit ET l'API (source de verite unique)
+│   ├── kimatey_core.py            Prompts systeme Gemini (4 personas), ask_gemini(), jeu de vigilance
+│   ├── alert_log.py                Journal d'alertes + score de securite, multi-domaine (reseau/transactions),
+│   │                                Postgres si DATABASE_URL configuree, sinon repli fichier JSON
+│   ├── db.py                      Connexion PostgreSQL generique (Neon/Supabase/Render Postgres)
+│   ├── pass_system.py             Catalogue de Pass (quotas Organisation/Grand Public, mode demo)
+│   ├── sensitivity.py             Reglage de seuil de decision par compte
+│   └── enriched_model.py          Generation de modele enrichi par organisation (Niveau 2 hybride)
 ├── app/
-│   └── app.py                     Étape 5 : interface Streamlit "Kimatey FinNet Guard" (thème navy/teal),
-│                                   page d'accueil + deux espaces (Organisation : 5 onglets ;
-│                                   Grand Public : 2 onglets). Deep-link : ?view=organisation / ?view=public
+│   └── app.py                     Interface Streamlit : page d'accueil (3 espaces) + Organisation
+│                                   (2 modules : Reseau, Transactions) + Academique
 ├── .streamlit/
-│   └── config.toml                Thème visuel (dark, primaryColor teal, background navy)
-├── web/                           Page d'accueil web + Espace Grand Public independants (hors Streamlit)
-│   ├── index.html                 Page d'accueil : branding + 2 cartes (lien direct vers l'API/Streamlit)
-│   ├── public.html                Espace Grand Public : assistant (chat + lecture vocale), mini-jeu,
-│   │                               parcours de collecte participative - tout via l'API FastAPI
-│   ├── config.js                  Les 2 seules valeurs a changer pour deployer (API_BASE_URL, ORG_APP_URL)
-│   └── style.css                  Theme navy/teal partage avec l'application Streamlit
-├── api/                           API REST FastAPI (backend indépendant, source de verite unique)
-│   ├── main.py                    Endpoints Organisation (proteges selon AUTH_MODE) + Grand Public (ouverts)
-│   ├── auth.py                    5 modes d'authentification (dont l'auto-inscription self_signup) + point d'extension Firebase
-│   ├── orgs.json                  Comptes de demonstration pour le mode 'per_org' (mots de passe hashes)
-│   ├── users.json                 Comptes crees par auto-inscription en mode 'self_signup' (mots de passe hashes, vide au depart)
-│   ├── schemas.py                 Schémas Pydantic (validation des requêtes/réponses)
-│   └── model_service.py           Chargement du modèle + pipeline de prétraitement (cache)
-├── outputs/                       Résultats générés (CSV, JSON, modèles .joblib, figures) +
-│                                   temoignages.jsonl (contributions Grand Public, cree a l'usage)
-├── demo_screenshots/              Captures d'écran : page d'accueil (Streamlit et web), Espace
-│                                   Organisation (5 onglets), Espace Grand Public (Streamlit et web)
-├── tests/                         Suite de tests automatisés (pytest)
-│   ├── conftest.py                 Configuration partagée (PYTHONPATH, répertoire de travail)
-│   ├── test_preprocessing.py       Étape 1 : prétraitement, no-leakage (17 tests)
-│   ├── test_models.py              Étapes 2-4 : modèles baseline/réduits/optimisés (18 tests)
-│   ├── test_api.py                 API FastAPI : endpoints Organisation, validations, cohérence (13 tests)
-│   ├── test_api_public_et_auth.py  API : Espace Grand Public + 5 modes d'authentification (39 tests)
-│   └── test_streamlit_app.py       Application Streamlit : smoke tests (AppTest, 24 tests,
-│                                   navigation page d'accueil -> Organisation / Grand Public)
-└── report/
-    ├── build_report.js            Générateur du rapport Word (projet)
-    ├── Rapport_Projet_ML_SOC.docx Rapport de projet complet
-    ├── build_fastapi_doc.js       Générateur du document de configuration FastAPI
-    ├── Configuration_API_FastAPI.docx  Document de configuration et mise en œuvre de l'API
-    ├── build_pptx.js              Générateur du PowerPoint de soutenance
-    ├── Presentation_Projet_ML_SOC.pptx PowerPoint de soutenance (19 slides)
-    ├── build_test_report.js       Générateur du rapport de tests
-    └── Rapport_de_Tests.docx      Rapport de tests détaillé (stratégie + 55 résultats réels)
+│   └── config.toml                Theme visuel (dark, primaryColor teal, background navy)
+├── web/                           Pages web independantes (hors Streamlit), deployees sur Vercel
+│   ├── index.html                 Page d'accueil : branding + 3 cartes (Organisation/Public/Academique)
+│   ├── public.html                Espace Grand Public complet (chat + voix + image + jeu + Pass)
+│   ├── dashboard.html             Dashboard SOC web anime (BI/restitution) - jauge, Chart.js, IA
+│   ├── config.js                  API_BASE_URL et ORG_APP_URL - a changer pour deployer ailleurs
+│   ├── style.css / landing.css / dashboard.css   Themes navy/teal partages
+│   ├── dashboard.js               Logique du dashboard web (fetch API, graphiques, filtres)
+│   └── i18n.js                    Traductions FR/EN (page d'accueil + Grand Public)
+├── api/                           API REST FastAPI (backend independant, source de verite unique)
+│   ├── main.py                    Tous les endpoints (Organisation, Grand Public, dashboard SOC)
+│   ├── auth.py                    5 modes d'authentification, comptes utilisateurs sur Postgres/JSON
+│   ├── orgs.json                  Comptes de demonstration pour le mode 'per_org'
+│   ├── users.json                 Repli JSON pour les comptes self_signup (vide si Postgres configure)
+│   ├── schemas.py                 Schemas Pydantic (validation des requetes/reponses)
+│   ├── model_service.py           Modele reseau : chargement + pipeline de pretraitement (cache)
+│   └── transaction_model_service.py   Modele transactions : chargement + pretraitement (cache)
+├── outputs/                       Resultats generes (CSV, JSON, modeles .joblib, figures) +
+│                                   organisation_state[_transactions].json (repli JSON, non versionne) +
+│                                   transaction_fraud/ (donnees synthetiques + modele)
+├── docs/                          Feuilles de route honnetes (non construit, mais documente)
+│   ├── ROADMAP_SMS_USSD.md
+│   ├── ROADMAP_PAIEMENT.md
+│   └── ROADMAP_MODELES_ADDITIONNELS.md
+├── tests/                         Suite de tests automatises (pytest) - couvre le pipeline ML reseau,
+│                                   l'API historique et l'authentification. NE COUVRE PAS ENCORE :
+│                                   le module Transactions, la persistance Postgres, l'Espace Academique,
+│                                   ni le dashboard SOC web (aucun test ecrit pour ces ajouts recents).
+└── report/                        Rapport de projet, document API, PowerPoint, rapport de tests
 ```
+
 
 ## Exécution du pipeline complet
 
@@ -92,48 +108,93 @@ L'application se lance dans le navigateur (par défaut http://localhost:8501), a
 visuel sombre navy/teal cohérent avec le PowerPoint de soutenance.
 
 Elle démarre sur une **page d'accueil** (bandeau "Kimatey FinNet Guard" + choix de l'espace) qui
-oriente vers deux espaces distincts, chacun accessible par un bouton dédié et refermable via un
-bouton "← Retour à l'accueil" :
+oriente vers trois espaces distincts :
 
-### 🏢 Espace Organisation (5 onglets)
+### 🏢 Espace Organisation (compte requis)
 
-Destiné aux équipes IT/sécurité des fintechs, opérateurs mobile money, institutions financières
-et administrations :
-- un tableau de bord de performance du modèle optimal (cartes KPI, comparaison des algorithmes, ROC, matrice de confusion),
-- l'import d'un fichier CSV de logs réseau (un exemple est fourni : `outputs/sample_logs_demo.csv`),
-- un formulaire de prédiction d'un flux réseau unique avec niveau de confiance,
-- une **surveillance en direct** : simulation d'un flux continu de connexions échantillonnées dans le
-  jeu de données réel, avec mise à jour progressive (compteurs, graphique, table des derniers flux,
-  comparaison à la vérité terrain) pour visualiser la supervision en conditions proches du temps réel,
-- un journal d'alertes dynamique, alimenté par les trois onglets précédents,
-- **Lieutenant Cyber** peut aussi expliquer un résultat (flux unique ou lot importé) en langage clair et
-  recommander une action, à la demande (bouton dédié après chaque analyse) — voir section « Lieutenant
-  Cyber » ci-dessous pour le détail.
+Dès la connexion, un **écran de sélection** propose deux produits distincts, chacun avec son propre
+badge de maturité :
+- **🌐 Sécurité Réseau** (✅ validé, 99,04 % d'exactitude)
+- **💰 Fraude Transactionnelle** (🧪 prototype, données synthétiques)
 
-### 👥 Espace Grand Public (2 onglets)
+Chaque module a ses propres onglets, sur un même schéma :
+- **👔 Résumé simple** : vue non-technique (jauge de score visuelle, pastilles de gravité en icônes,
+  langage courant, aucune métrique de modèle),
+- **⚙️ Réglages** (module Réseau) : personnalisation - seuil de sensibilité, modèle enrichi par
+  organisation (Niveau 2 hybride, à partir de 20 échantillons validés),
+- **📁 Analyser un fichier de logs / de transactions** : import CSV en lot,
+- **🔎 Vérifier un flux unique** (module Réseau) : formulaire de prédiction ponctuelle,
+- **🔴 Surveillance en direct** (module Réseau) : simulation d'un flux continu échantillonné dans le
+  jeu de données réel, à des fins de démonstration (ce n'est pas une capture réseau live),
+- **🚨 Alertes détectées** : score de sécurité, statut ouvert/fermé, gravité, tendance 7 jours,
+  filtres, journal complet - alimenté par les imports/vérifications précédents,
+- **📈 Visualisation** : lien vers le dashboard SOC web animé (voir section dédiée ci-dessous),
+  scopé strictement au domaine du module courant.
 
-Destiné directement aux citoyens, sans jargon technique :
-- **Lieutenant Cyber**, l'IA conversationnelle et vocale de Kimatey FinNet Guard (API Gemini), qui
-  explique les alertes en langage clair et aide à évaluer si un SMS/message reçu ressemble à une
-  arnaque mobile money. Nécessite une clé API Gemini gratuite (https://aistudio.google.com/apikey),
-  définie dans la variable d'environnement `GEMINI_API_KEY` avant de lancer Streamlit
-  (`export GEMINI_API_KEY=votre_cle`). Sans clé, l'onglet reste utilisable pour saisir une clé de test,
-  sans bloquer le reste de l'application,
-- un onglet **Sensibilisation**, désormais un **jeu de vigilance gamifié** (voir section dédiée
-  ci-dessous), et
-  un **échange animé façon chat** avec l'assistant (et non un formulaire) qui pose une question à la
-  fois avec des réponses rapides en boutons, pour aider à repérer de nouvelles techniques de fraude
-  sans jamais demander d'information personnelle. Un dernier détail facultatif (texte ou audio) est
-  automatiquement résumé par Gemini en une fiche anonymisée (technique utilisée uniquement, jamais de
-  nom/numéro/montant), avec un remerciement animé (ballons) à la fin de l'échange. Les fiches ne sont
-  conservées que dans la session de démonstration (pas encore reliées à une base de données
-  persistante ni à un pipeline de réentraînement du modèle).
+**Lieutenant Cyber** peut expliquer un résultat en langage clair, avec un persona dédié selon le
+contexte (analyste technique ou décideur sans jargon) - voir section « Lieutenant Cyber » ci-dessous.
 
-Cette page d'accueil + deux espaces au sein de Streamlit reste utile pour une démo rapide en local
-(tout dans un seul processus). L'architecture cible réellement séparée existe désormais en parallèle :
-voir "Page d'accueil web + Espace Grand Public independants" ci-dessous. L'Espace Organisation continue
-de vivre dans Streamlit (outil interne), mais accepte maintenant un lien direct `?view=organisation`
-pour y entrer sans repasser par sa propre page d'accueil.
+### 👥 Espace Grand Public (libre d'accès)
+
+Ne vit plus dans Streamlit : le bouton redirige vers la page web indépendante (voir section
+« Page d'accueil web + Espace Grand Public indépendants » ci-dessous), seule désormais maintenue.
+
+### 🎓 Espace Académique (libre d'accès, aucun compte requis)
+
+Cas d'étude pédagogique (machine learning appliqué à la cybersécurité réseau), pour enseignants et
+étudiants - volontairement indépendant de l'Espace Organisation (un étudiant n'a pas à créer un
+compte "organisation" pour réviser) :
+- métriques de confiance du modèle (accuracy, F1 macro, AUC macro) avec explications dépliables,
+- comparaison des 5 algorithmes testés, courbes ROC, matrice de confusion,
+- **Professeur Cyber** : Q&A libre avec un persona pédagogique dédié, connaît le contexte précis
+  du projet,
+- mini-quiz (5 questions fixes) sur les concepts clés (fuite de données, F1 macro, GridSearchCV, RFE),
+- import de jeu de données personnalisé : outil générique d'EDA (moyenne, écart-type, histogramme),
+  découplé du modèle Kimatey - pour illustrer des concepts de statistique en cours ou en devoir.
+
+Cette page d'accueil + trois espaces au sein de Streamlit/web reste utile pour une démo rapide.
+L'Espace Organisation continue de vivre dans Streamlit (outil interne), avec deep-links directs
+(`?view=organisation`, `?view=academic`).
+
+## Persistance des données (PostgreSQL / Neon)
+
+Par défaut, les comptes utilisateurs et le journal d'alertes vivent sur fichiers JSON locaux -
+**non persistants** sur la plupart des hébergeurs gratuits (le disque est réinitialisé à chaque
+redéploiement). Pour une vraie persistance, configurez la variable d'environnement `DATABASE_URL`
+(compatible Neon, Supabase, Render Postgres, ou toute base PostgreSQL) :
+
+```bash
+export DATABASE_URL="postgresql://user:password@host/dbname?sslmode=require"
+```
+
+Dès que cette variable est définie, `core/db.py` et `core/alert_log.py` basculent automatiquement
+sur PostgreSQL (schéma créé automatiquement au démarrage) - **sans variable définie, aucune
+régression** : repli transparent sur le comportement fichier JSON existant. Les deux tables créées :
+`users` (comptes) et `alerts` / `score_history` (journal, avec colonne `domaine` pour isoler
+Sécurité Réseau et Fraude Transactionnelle l'un de l'autre).
+
+**Important** : cette variable doit être configurée séparément sur **chaque** environnement
+d'exécution (Render pour l'API, Streamlit Cloud dans ses "Secrets") - ce sont deux processus
+indépendants, chacun avec son propre jeu de variables d'environnement.
+
+## Dashboard SOC web animé (`web/dashboard.html`)
+
+Une page web indépendante (Vercel), pensée comme un vrai outil de **restitution façon BI**
+(Power BI-like) : elle ne fait qu'afficher des données déjà collectées, avec des graphiques
+interactifs (Chart.js - survol, animations fluides), contrairement à Streamlit qui reste l'outil
+**opérationnel** (import, vérification, simulation).
+
+- Connexion avec le même compte que l'Espace Organisation,
+- **scopée strictement par domaine** via un paramètre d'URL (`?domaine=reseau` ou
+  `?domaine=transactions`) - quand l'utilisateur arrive depuis un module précis, aucune visibilité
+  sur l'autre domaine (sélecteur masqué). Sans paramètre (accès direct), un sélecteur reste
+  disponible en repli,
+- jauge de score circulaire animée, donut de statut, barres de gravité, courbes chronologiques
+  multi-jours, filtre de date, journal cliquable (marquer traité/rouvrir),
+- commentaire IA à la demande (Lieutenant Cyber, persona décideur ou analyste selon la vue).
+
+Consomme directement les endpoints `/organisation/dashboard_soc` et
+`/organisation/dashboard_transactions` de l'API (voir liste complète des endpoints ci-dessous).
 
 ## Jeu de vigilance gamifié
 
@@ -184,32 +245,32 @@ une seule source de vérité dans `core/kimatey_core.py`) :
 - `GET /scenarios` reste inchangé (3 scénarios Mobile Money historiques), pour ne rien casser côté
   clients existants.
 
-## Lieutenant Cyber : une seule IA pour les deux univers
+## Lieutenant Cyber : une seule IA, quatre personas selon l'audience
 
 Objectif explicite : que la même IA rende « l'analyse des données, le rendu des tableaux de bord et
-l'assistance des deux types d'utilisateurs plus fluides et simples », plutôt que d'avoir un chatbot
-texte (Grand Public), une mascotte de quiz, et un tableau de bord purement statique (Organisation)
-comme trois expériences disjointes. **Lieutenant Cyber** est cette identité unique, avec deux rôles :
+l'assistance des différents types d'utilisateurs plus fluides et simples », plutôt que d'avoir des
+expériences disjointes. **Lieutenant Cyber** est cette identité unique, avec quatre rôles/prompts
+système dédiés (`core/kimatey_core.py`) :
 
-- **Rôle Grand Public (inchangé dans sa mécanique, renommé)** : l'assistant conversationnel/vocal
-  (onglet « 🎖️ Lieutenant Cyber ») et la mascotte du jeu de vigilance, dans les 6 catégories.
-- **Rôle Organisation (nouveau)** : dans l'Espace Organisation, après une prédiction (flux unique ou
-  lot importé), un bouton « 🎖️ Demander à Lieutenant Cyber d'expliquer ce résultat » envoie le résultat
-  déjà calculé par le modèle (classe prédite, confiance, probabilités, valeurs des variables ou
-  résumé du lot) à Gemini avec un system prompt dédié (`ORG_ANALYST_SYSTEM_PROMPT`), qui répond en
-  langage clair avec une recommandation d'action concrète.
+- **`ASSISTANT_SYSTEM_PROMPT`** (Grand Public) : l'assistant conversationnel/vocal et la mascotte du
+  jeu de vigilance.
+- **`ORG_ANALYST_SYSTEM_PROMPT`** (Organisation, technique) : explique un résultat (flux unique ou lot)
+  en langage clair avec une recommandation d'action, pour une équipe technique.
+- **`ORG_EXECUTIVE_SYSTEM_PROMPT`** (Organisation, décideur) : même rôle, mais interdiction stricte de
+  tout jargon technique - pour un manager/décideur non-technique (Résumé simple, dashboard web).
+- **`ACADEMIC_INSTRUCTOR_SYSTEM_PROMPT`** ("Professeur Cyber", Espace Académique) : explique les
+  concepts de ML/statistiques/méthodologie avec le contexte précis du projet, pour enseignants et
+  étudiants.
 
-**Grounding strict, delibéré** : dans ce rôle, Lieutenant Cyber ne classifie jamais elle-même le
-trafic (le modèle de machine learning entraîné reste seul responsable de la classification) et le
-system prompt lui interdit explicitement d'inventer un signal, une menace ou une donnée qui ne lui a
-pas été fournie dans le contexte de l'appel - un risque d'hallucination serait plus grave ici que pour
-un simple chat de sensibilisation, puisque ce rôle s'adresse à des équipes qui prennent des décisions
-de sécurité sur la base de cette explication.
+**Grounding strict, délibéré** : dans tous les rôles Organisation/Académique, Lieutenant Cyber ne
+classifie jamais elle-même le trafic (le modèle de machine learning entraîné reste seul responsable
+de la classification) et chaque system prompt lui interdit explicitement d'inventer un signal, une
+menace ou une donnée qui ne lui a pas été fournie dans le contexte de l'appel.
 
-Exposé aussi côté API (protégé par `AUTH_MODE`, comme `/predict` et consorts) pour un client externe :
-`POST /organisation/explain_flow` (résultat d'un flux unique) et `POST /organisation/explain_batch`
-(résumé d'un lot). Sans clé Gemini configurée côté serveur, les deux répondent `503` explicitement,
-jamais un contenu vide ni un crash.
+Exposé côté API (protégé par `AUTH_MODE`) : `POST /organisation/explain_flow`,
+`POST /organisation/explain_batch`, `POST /organisation/dashboard_soc/commentaire` (paramètre `mode`
+= `executive` ou `analyst`, `domaine` = `reseau` ou `transactions`). Sans clé Gemini configurée côté
+serveur, ces endpoints répondent `503` explicitement, jamais un contenu vide ni un crash.
 
 ## Lancer l'API REST (FastAPI)
 
@@ -221,13 +282,20 @@ Documentation interactive : http://localhost:8000/docs (Swagger UI). Voir le doc
 `report/Configuration_API_FastAPI.docx` pour le détail des endpoints historiques (predict*), et les
 sections ci-dessous pour les endpoints Grand Public et l'authentification, ajoutés depuis.
 
-L'API expose deux familles d'endpoints :
-- **Organisation** (`/model_info`, `/predict`, `/predict_batch`, `/predict_csv`,
-  `/organisation/explain_flow`, `/organisation/explain_batch`) : protégés selon `AUTH_MODE` (voir
-  "Authentification" ci-dessous). Par défaut (`AUTH_MODE=none`), ouverts comme avant.
-- **Grand Public** (`/scenarios`, `/report_steps`, `/assistant/chat`, `/temoignage`,
-  `/temoignages/count`, `/game/categories`, `/game/meta`) : toujours ouverts, sans authentification,
-  quel que soit `AUTH_MODE` - ce pôle s'adresse au citoyen lambda et ne doit jamais dépendre d'un compte.
+L'API expose plusieurs familles d'endpoints (voir `/docs` pour la liste exhaustive à jour) :
+- **Organisation - Réseau** (`/model_info`, `/predict`, `/predict_batch`, `/predict_csv`,
+  `/organisation/explain_flow`, `/organisation/explain_batch`, `/organisation/dashboard_soc`,
+  `/organisation/dashboard_soc/toggle/{alert_id}`, `/sensibilite`, `/organisation/modele_enrichi`) :
+  protégés selon `AUTH_MODE` (voir "Authentification" ci-dessous).
+- **Organisation - Transactions** (`/predict_transaction`, `/predict_transaction_csv`,
+  `/organisation/dashboard_transactions`, `/organisation/dashboard_transactions/toggle/{alert_id}`) :
+  même protection, journal et score isolés du domaine Réseau (colonne `domaine` en base).
+- **Organisation - commun** (`/organisation/dashboard_soc/commentaire`) : commentaire IA, paramétré
+  par `mode` (executive/analyst) et `domaine` (reseau/transactions).
+- **Grand Public** (`/scenarios`, `/report_steps`, `/assistant/chat`, `/assistant/chat_image`,
+  `/temoignage`, `/temoignages/count`, `/temoignages/tendances`, `/game/categories`, `/game/meta`,
+  `/pass/catalogue`, `/pass/actif`, `/pass/souscrire`, `/public/progress`) : toujours ouverts, sans
+  authentification, quel que soit `AUTH_MODE`.
 
 ## Authentification de l'Espace Organisation (API + Streamlit)
 
@@ -319,17 +387,13 @@ python3 -m http.server 8080 --directory web
 streamlit run app/app.py
 ```
 
-Ouvrir http://localhost:8080/index.html : la carte "Espace Grand Public" mène à `public.html` (assistant
-conversationnel avec lecture vocale automatique des réponses, mini-jeu de vigilance, parcours de collecte
-participative anonymisée par des boutons de réponse rapide) ; la carte "Espace Organisation" mène
-directement à `http://localhost:8501/?view=organisation` (Streamlit, sans double clic).
+Ouvrir http://localhost:8080/index.html : trois cartes - "Espace Organisation" mène directement à
+`http://localhost:8501/?view=organisation` (Streamlit) ; "Espace Grand Public" mène à `public.html`
+(assistant conversationnel, voix, image, jeu de vigilance gamifié, système de Pass) ; "Espace
+Académique" mène à `http://localhost:8501/?view=academic` (Streamlit, aucun compte requis).
 
 Les deux seules valeurs à changer pour déployer ailleurs qu'en local sont dans `web/config.js`
 (`API_BASE_URL` et `ORG_APP_URL`).
-
-Limite assumée : contrairement à l'Espace Grand Public de Streamlit, cette page web ne propose pas
-(encore) la saisie vocale des questions (uniquement la lecture à voix haute des réponses) - ajouter
-l'enregistrement audio navigateur (MediaRecorder) et un endpoint API dédié reste une piste de roadmap.
 
 ## Résultat principal
 
@@ -346,9 +410,16 @@ cd kimatey_finnet_guard
 python3 -m pytest tests/ -v
 ```
 
-111 tests (pipeline ML, API - Organisation, Grand Public, jeu de vigilance gamifié, assistance à
-l'analyse Lieutenant Cyber, 5 modes d'authentification dont l'auto-inscription self_signup -,
+111 tests (pipeline ML réseau, API - Organisation historique, Grand Public, jeu de vigilance gamifié,
+assistance à l'analyse Lieutenant Cyber, 5 modes d'authentification dont l'auto-inscription self_signup,
 application Streamlit dont l'écran de connexion/création de compte) s'exécutent en moins de 25 secondes.
+
+**⚠️ Couverture incomplète, honnêtement signalée** : cette suite ne couvre pas encore le module Fraude
+Transactionnelle, la persistance PostgreSQL (`core/db.py`, `core/alert_log.py`), l'Espace Académique,
+ni le dashboard SOC web (`web/dashboard.html`) - fonctionnalités ajoutées après la suite de tests
+initiale, validées manuellement mais sans tests automatisés dédiés à ce jour. À ajouter avant tout
+usage en production.
+
 Le détail de la stratégie de test et des résultats se trouve dans
 `report/Rapport_de_Tests.docx`.
 
