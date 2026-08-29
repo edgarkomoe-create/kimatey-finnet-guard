@@ -1,12 +1,15 @@
 {
-  "name": "Arbre_Decision_optimise_transactions",
-  "accuracy": 0.9419,
-  "f1_score": 0.7882,
-  "auc": 0.8292,
+  "name": "Gradient_Boosting_optimise_transactions",
+  "accuracy": 0.9663,
+  "f1_score": 0.7417,
+  "auc": 0.8198,
+  "precision": 0.8631,
+  "recall": 0.6502,
+  "pr_auc": 0.6853,
   "best_params": {
-    "max_depth": 6,
-    "min_samples_leaf": 2,
-    "min_samples_split": 10
+    "learning_rate": 0.05,
+    "max_depth": null,
+    "max_iter": 300
   },
   "features_used": [
     "Montant",
@@ -18,7 +21,42 @@
     "Nb_Destinataires_Distincts_7j",
     "Changement_Appareil"
   ],
-  "n_train": 6400,
-  "n_test": 1600,
+  "n_train": 12000,
+  "n_test": 3000,
+  "fraud_rate_train": 0.0742,
+  "algorithmes_compares": [
+    {
+      "Modele": "Gradient_Boosting",
+      "AUC_PR_CV_moyenne": 0.6775,
+      "AUC_PR_CV_ecart_type": 0.0397,
+      "Exactitude": 0.9653,
+      "F1_Score": 0.7347,
+      "AUC": 0.8227
+    },
+    {
+      "Modele": "Foret_Aleatoire",
+      "AUC_PR_CV_moyenne": 0.6745,
+      "AUC_PR_CV_ecart_type": 0.0369,
+      "Exactitude": 0.9723,
+      "F1_Score": 0.7775,
+      "AUC": 0.81
+    },
+    {
+      "Modele": "Regression_Logistique",
+      "AUC_PR_CV_moyenne": 0.666,
+      "AUC_PR_CV_ecart_type": 0.0302,
+      "Exactitude": 0.9357,
+      "F1_Score": 0.6069,
+      "AUC": 0.8132
+    },
+    {
+      "Modele": "Arbre_Decision",
+      "AUC_PR_CV_moyenne": 0.3921,
+      "AUC_PR_CV_ecart_type": 0.0259,
+      "Exactitude": 0.9427,
+      "F1_Score": 0.6073,
+      "AUC": 0.7834
+    }
+  ],
   "donnees": "SYNTHETIQUES - voir generate_synthetic_data.py, non entraine sur de vraies transactions"
 }
