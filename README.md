@@ -413,8 +413,8 @@ python3 -m pytest tests/ -v
 109 tests (pipeline ML réseau, API - Organisation historique, Grand Public, jeu de vigilance gamifié,
 assistance à l'analyse Lieutenant Cyber, 5 modes d'authentification dont l'auto-inscription self_signup,
 application Streamlit dont l'écran de connexion/création de compte, écran de sélection de module de
-l'Espace Organisation, redirection de l'Espace Grand Public vers la version web) s'exécutent en moins
-de 25 secondes.
+l'Espace Organisation, redirection de l'Espace Grand Public vers la version web) + 33 tests de
+persistance PostgreSQL/JSON (voir ci-dessous) s'exécutent en moins de 30 secondes au total.
 
 `tests/test_streamlit_app.py` a été resynchronisé avec deux restructurations de l'interface qui
 l'avaient rendu obsolète sans mise à jour immédiate (19 tests étaient en échec avant correction,
@@ -424,13 +424,19 @@ au lieu de 5), et l'Espace Grand Public Streamlit est déprécié - la carte d'a
 désormais vers la version web indépendante (Vercel) via un lien externe plutôt qu'un onglet interne.
 
 **⚠️ Couverture incomplète, honnêtement signalée** : cette suite ne couvre pas encore le module Fraude
-Transactionnelle, la persistance PostgreSQL (`core/db.py`, `core/alert_log.py`), l'Espace Académique,
-ni le dashboard SOC web (`web/dashboard.html`) - fonctionnalités ajoutées après la suite de tests
-initiale, validées manuellement mais sans tests automatisés dédiés à ce jour. Le jeu de vigilance
-gamifié et l'assistant Lieutenant Cyber, désormais implémentés en HTML/JS pur sur la version web
-(Vercel) plutôt qu'en Streamlit, ne sont plus couverts par cette suite pytest/AppTest non plus -
-une couverture équivalente y nécessiterait un outil de test web (ex. Playwright). À ajouter avant
-tout usage en production.
+Transactionnelle, l'Espace Académique, ni le dashboard SOC web (`web/dashboard.html`) - fonctionnalités
+ajoutées après la suite de tests initiale, validées manuellement mais sans tests automatisés dédiés à
+ce jour. Le jeu de vigilance gamifié et l'assistant Lieutenant Cyber, désormais implémentés en HTML/JS
+pur sur la version web (Vercel) plutôt qu'en Streamlit, ne sont plus couverts par cette suite
+pytest/AppTest non plus - une couverture équivalente y nécessiterait un outil de test web (ex.
+Playwright). À ajouter avant tout usage en production.
+
+**Persistance PostgreSQL (`core/db.py`, `core/alert_log.py`)** : couverte depuis peu par
+`tests/test_persistence_postgresql.py` (33 tests) - connexion mockée (aucune base réelle requise
+pour l'essentiel de la suite), isolation stricte entre domaines réseau/transactions, repli JSON,
+et toute la logique métier pure (score de sécurité, MTTR, tendance, répartition de gravité). Un
+test d'intégration optionnel contre une vraie base existe (`TestIntegrationReelleOptionnelle`,
+ignoré par défaut, activable via `TEST_DATABASE_URL`).
 
 Le détail de la stratégie de test et des résultats se trouve dans
 `report/Rapport_de_Tests.docx`.
