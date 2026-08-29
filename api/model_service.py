@@ -12,6 +12,8 @@ from functools import lru_cache
 import joblib
 import pandas as pd
 
+from core.model_version_check import check_sklearn_version
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 OUT_DIR = BASE_DIR / "outputs"
 MODEL_DIR = OUT_DIR / "models"
@@ -36,6 +38,7 @@ class ModelService:
         with open(OUT_DIR / "best_model_info.json") as f:
             self.info = json.load(f)
         self.selected_features = self.info["features_used"]
+        check_sklearn_version(self.info, "Modele reseau")
 
     def preprocess(self, df_raw: pd.DataFrame) -> pd.DataFrame:
         """Imputation mediane -> ecretage IQR -> standardisation -> selection RFE."""

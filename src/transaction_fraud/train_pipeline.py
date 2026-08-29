@@ -33,6 +33,7 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
+import sklearn
 from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
@@ -122,6 +123,7 @@ def run():
     preds = best_model.predict(X_test_s)
     proba = best_model.predict_proba(X_test_s)[:, 1]
     final_metrics = {
+        "sklearn_version": sklearn.__version__,
         "name": f"{best_name}_optimise_transactions",
         "accuracy": round(accuracy_score(y_test, preds), 4),
         "f1_score": round(f1_score(y_test, preds), 4),

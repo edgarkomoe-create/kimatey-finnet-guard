@@ -402,6 +402,20 @@ Modèle optimal retenu : **Arbre de Décision élagué et optimisé** (5 variabl
 - F1-score macro : 98,72 %
 - AUC macro : 99,92 %
 
+## Garde-fou de version scikit-learn
+
+`requirements.txt` épingle `scikit-learn` à une version exacte (`==`), contrairement au reste des
+dépendances (`>=`) : les objets scikit-learn sérialisés via joblib/pickle ne sont pas garantis
+stables entre versions mineures - un écart peut se charger sans erreur mais produire des
+prédictions subtilement différentes de celles validées à l'entraînement. Chaque pipeline
+d'entraînement (`src/grid_search.py`, `src/transaction_fraud/train_pipeline.py`) enregistre
+désormais la version scikit-learn utilisée dans les métadonnées du modèle
+(`sklearn_version` dans `best_model_info*.json`) ; `core/model_version_check.py` la compare à la
+version installée à chaque démarrage de service (`api/model_service.py`,
+`api/transaction_model_service.py`) et journalise un avertissement clair (sans bloquer le
+démarrage) en cas d'écart - utile en particulier si l'environnement de déploiement (Render,
+Streamlit Cloud) réinstalle une version différente de celle utilisée localement.
+
 ## Exécuter la suite de tests
 
 ```bash

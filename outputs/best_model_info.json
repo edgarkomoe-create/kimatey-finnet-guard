@@ -1,4 +1,5 @@
 {
+  "sklearn_version": "1.8.0",
   "name": "Arbre_Decision_optimise",
   "accuracy": 0.9904,
   "f1_macro": 0.9872,

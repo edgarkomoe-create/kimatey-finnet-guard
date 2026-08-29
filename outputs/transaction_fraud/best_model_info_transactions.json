@@ -1,4 +1,5 @@
 {
+  "sklearn_version": "1.8.0",
   "name": "Gradient_Boosting_optimise_transactions",
   "accuracy": 0.9663,
   "f1_score": 0.7417,
