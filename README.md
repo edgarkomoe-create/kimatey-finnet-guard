@@ -410,15 +410,27 @@ cd kimatey_finnet_guard
 python3 -m pytest tests/ -v
 ```
 
-111 tests (pipeline ML réseau, API - Organisation historique, Grand Public, jeu de vigilance gamifié,
+109 tests (pipeline ML réseau, API - Organisation historique, Grand Public, jeu de vigilance gamifié,
 assistance à l'analyse Lieutenant Cyber, 5 modes d'authentification dont l'auto-inscription self_signup,
-application Streamlit dont l'écran de connexion/création de compte) s'exécutent en moins de 25 secondes.
+application Streamlit dont l'écran de connexion/création de compte, écran de sélection de module de
+l'Espace Organisation, redirection de l'Espace Grand Public vers la version web) s'exécutent en moins
+de 25 secondes.
+
+`tests/test_streamlit_app.py` a été resynchronisé avec deux restructurations de l'interface qui
+l'avaient rendu obsolète sans mise à jour immédiate (19 tests étaient en échec avant correction,
+voir le journal Git pour le détail) : l'entrée dans l'Espace Organisation passe désormais par un
+écran de choix entre 2 produits avant les onglets techniques (7 onglets pour le module réseau,
+au lieu de 5), et l'Espace Grand Public Streamlit est déprécié - la carte d'accueil pointe
+désormais vers la version web indépendante (Vercel) via un lien externe plutôt qu'un onglet interne.
 
 **⚠️ Couverture incomplète, honnêtement signalée** : cette suite ne couvre pas encore le module Fraude
 Transactionnelle, la persistance PostgreSQL (`core/db.py`, `core/alert_log.py`), l'Espace Académique,
 ni le dashboard SOC web (`web/dashboard.html`) - fonctionnalités ajoutées après la suite de tests
-initiale, validées manuellement mais sans tests automatisés dédiés à ce jour. À ajouter avant tout
-usage en production.
+initiale, validées manuellement mais sans tests automatisés dédiés à ce jour. Le jeu de vigilance
+gamifié et l'assistant Lieutenant Cyber, désormais implémentés en HTML/JS pur sur la version web
+(Vercel) plutôt qu'en Streamlit, ne sont plus couverts par cette suite pytest/AppTest non plus -
+une couverture équivalente y nécessiterait un outil de test web (ex. Playwright). À ajouter avant
+tout usage en production.
 
 Le détail de la stratégie de test et des résultats se trouve dans
 `report/Rapport_de_Tests.docx`.
