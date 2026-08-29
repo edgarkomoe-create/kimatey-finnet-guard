@@ -23,6 +23,35 @@ citoyens contre les arnaques mobile money.
 **Persistance** : comptes utilisateurs et journal d'alertes sur PostgreSQL (Neon), avec repli
 automatique sur fichiers JSON si aucune base n'est configurée (voir section dédiée ci-dessous).
 
+## Calibration du générateur de données synthétiques (Fraude Transactionnelle) sur des statistiques réelles BCEAO
+
+Le module Fraude Transactionnelle reste un prototype entraîné sur des données **100% synthétiques**
+(aucune vraie transaction, aucune fraude réelle constatée) - ce statut ne change pas tant qu'un
+partenariat avec un opérateur mobile money réel n'aura pas fourni de données anonymisées.
+
+Ce qui a changé : `src/transaction_fraud/generate_synthetic_data.py` (v3) calibre désormais les
+**montants** et la **typologie de fraude** sur des statistiques publiques réelles de la BCEAO
+(Banque Centrale des États de l'Afrique de l'Ouest), plutôt que sur des valeurs choisies sans
+référence :
+
+- **Montant moyen des transactions légitimes** : centré sur ~20 000 FCFA, ancré sur le montant
+  moyen réel d'un transfert de personne à personne en zone UEMOA/Côte d'Ivoire (18 220-22 692 FCFA
+  selon le [Rapport annuel BCEAO sur les services financiers numériques dans l'UEMOA - 2024](https://www.bceao.int/sites/default/files/2026-03/Rapport%20annuel%20sur%20les%20services%20financiers%20num%C3%A9riques%20dans%20l'UEMOA%20-%202024.pdf))
+- **Sous-type de fraude "bypass cash in"** (remplace l'ancien "structuring" générique) : calibré
+  sur un pattern de fraude réellement documenté par la BCEAO - le fractionnement des dépôts
+  clients par des distributeurs/agents en plusieurs petites transactions successives, pour
+  toucher davantage de commissions (barèmes dégressifs par palier). Voir le
+  [Rapport annuel BCEAO 2021](https://www.bceao.int/sites/default/files/2023-02/Rapport%20annuel%20sur%20les%20services%20financiers%20num%C3%A9riques%20dans%20l'UEMOA%20%C3%A0%20fin%202021.pdf),
+  qui documente ce pattern (Graphique n°5 : Fraudes, incidents et gestion des réclamations
+  clients).
+
+**Ce qui reste une hypothèse non vérifiée**, honnêtement signalé : le **taux de fraude** (5% par
+défaut) et les deux autres sous-types (compte compromis, vélocité/mules) n'ont pas pu être ancrés
+sur des chiffres BCEAO publiquement disponibles - les rapports annuels mentionnent la fraude
+comme risque croissant mais publient les statistiques chiffrées sous forme de graphique (image
+dans le PDF), non extractibles automatiquement. Cette calibration améliore le réalisme des
+*montants* et de la *typologie*, pas la validité du *taux de fraude* lui-même.
+
 ## Structure du projet
 
 ```

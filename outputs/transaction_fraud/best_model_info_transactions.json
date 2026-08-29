@@ -1,16 +1,16 @@
 {
   "sklearn_version": "1.8.0",
   "name": "Gradient_Boosting_optimise_transactions",
-  "accuracy": 0.9663,
-  "f1_score": 0.7417,
-  "auc": 0.8198,
-  "precision": 0.8631,
-  "recall": 0.6502,
-  "pr_auc": 0.6853,
+  "accuracy": 0.9653,
+  "f1_score": 0.7263,
+  "auc": 0.8194,
+  "precision": 0.9139,
+  "recall": 0.6026,
+  "pr_auc": 0.6701,
   "best_params": {
-    "learning_rate": 0.05,
-    "max_depth": null,
-    "max_iter": 300
+    "learning_rate": 0.1,
+    "max_depth": 4,
+    "max_iter": 150
   },
   "features_used": [
     "Montant",
@@ -24,39 +24,39 @@
   ],
   "n_train": 12000,
   "n_test": 3000,
-  "fraud_rate_train": 0.0742,
+  "fraud_rate_train": 0.0765,
   "algorithmes_compares": [
     {
       "Modele": "Gradient_Boosting",
-      "AUC_PR_CV_moyenne": 0.6775,
-      "AUC_PR_CV_ecart_type": 0.0397,
-      "Exactitude": 0.9653,
-      "F1_Score": 0.7347,
-      "AUC": 0.8227
-    },
-    {
-      "Modele": "Foret_Aleatoire",
-      "AUC_PR_CV_moyenne": 0.6745,
-      "AUC_PR_CV_ecart_type": 0.0369,
-      "Exactitude": 0.9723,
-      "F1_Score": 0.7775,
-      "AUC": 0.81
+      "AUC_PR_CV_moyenne": 0.6999,
+      "AUC_PR_CV_ecart_type": 0.0356,
+      "Exactitude": 0.9627,
+      "F1_Score": 0.7128,
+      "AUC": 0.8113
     },
     {
       "Modele": "Regression_Logistique",
-      "AUC_PR_CV_moyenne": 0.666,
-      "AUC_PR_CV_ecart_type": 0.0302,
-      "Exactitude": 0.9357,
-      "F1_Score": 0.6069,
-      "AUC": 0.8132
+      "AUC_PR_CV_moyenne": 0.697,
+      "AUC_PR_CV_ecart_type": 0.0336,
+      "Exactitude": 0.915,
+      "F1_Score": 0.5216,
+      "AUC": 0.791
+    },
+    {
+      "Modele": "Foret_Aleatoire",
+      "AUC_PR_CV_moyenne": 0.6968,
+      "AUC_PR_CV_ecart_type": 0.0358,
+      "Exactitude": 0.9687,
+      "F1_Score": 0.7459,
+      "AUC": 0.8162
     },
     {
       "Modele": "Arbre_Decision",
-      "AUC_PR_CV_moyenne": 0.3921,
-      "AUC_PR_CV_ecart_type": 0.0259,
-      "Exactitude": 0.9427,
-      "F1_Score": 0.6073,
-      "AUC": 0.7834
+      "AUC_PR_CV_moyenne": 0.4191,
+      "AUC_PR_CV_ecart_type": 0.0176,
+      "Exactitude": 0.9387,
+      "F1_Score": 0.6034,
+      "AUC": 0.7885
     }
   ],
   "donnees": "SYNTHETIQUES - voir generate_synthetic_data.py, non entraine sur de vraies transactions"
