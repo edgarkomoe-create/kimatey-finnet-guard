@@ -90,10 +90,15 @@ def _goto_organisation(app_test):
 
 def _choisir_module_reseau(app_test):
     """Depuis l'ecran de selection a 2 produits de l'Espace Organisation,
-    choisit le module Securite Reseau (celui teste par cette suite - le
-    module Fraude Transactionnelle n'a pas encore de couverture pytest
-    dediee, voir README)."""
+    choisit le module Securite Reseau."""
     return _click_button_containing(app_test, "Ouvrir Securite Reseau")
+
+
+def _choisir_module_transactions(app_test):
+    """Depuis l'ecran de selection a 2 produits de l'Espace Organisation,
+    choisit le module Fraude Transactionnelle (prototype, donnees
+    synthetiques - voir src/transaction_fraud/)."""
+    return _click_button_containing(app_test, "Ouvrir Fraude Transactionnelle")
 
 
 def _goto_reseau(app_test):
@@ -102,6 +107,18 @@ def _goto_reseau(app_test):
     Reseau)."""
     _goto_organisation(app_test)
     return _choisir_module_reseau(app_test)
+
+
+def _goto_transactions(app_test):
+    """Raccourci equivalent pour le module Fraude Transactionnelle."""
+    _goto_organisation(app_test)
+    return _choisir_module_transactions(app_test)
+
+
+def _goto_academic(app_test):
+    """Clique sur la carte d'entree de l'Espace Academique (libre d'acces,
+    aucun compte requis - contrairement a l'Espace Organisation)."""
+    return _click_button_containing(app_test, "Espace Academique")
 
 
 class TestPageAccueil:
@@ -352,3 +369,135 @@ class TestEspaceGrandPublic:
         assert not a.exception
         boutons_accueil = [b.label or "" for b in a.get("button")]
         assert any("Espace Organisation" in b for b in boutons_accueil)
+
+
+# ======================================================================
+# Espace Academique - jusqu'ici sans couverture (voir README, section tests)
+# ======================================================================
+class TestEspaceAcademique:
+    """Libre d'acces, aucun compte requis (contrairement a l'Espace
+    Organisation) : accessible directement depuis la page d'accueil."""
+
+    def test_acces_direct_sans_authentification(self, at):
+        _goto_academic(at)
+        assert not at.exception
+        markdown_html = " ".join(m.value for m in at.markdown)
+        assert "Espace Academique" in markdown_html
+
+    def test_quatre_cartes_kpi_du_modele_affichees(self, at):
+        """Exactitude, F1 macro, AUC macro, nb de variables retenues."""
+        _goto_academic(at)
+        markdown_html = " ".join(m.value for m in at.markdown)
+        assert markdown_html.count("kpi-value") >= 4
+
+    def test_bouton_retour_accueil_fonctionne(self, at):
+        _goto_academic(at)
+        _click_button_containing(at, "Retour a l'accueil")
+        assert not at.exception
+        boutons = [b.label or "" for b in at.get("button")]
+        assert any("Espace Academique" in b for b in boutons)
+
+    def test_trois_modes_professeur_cyber_presents(self, at):
+        _goto_academic(at)
+        mode_radio = next(r for r in at.radio if r.label == "Mode")
+        assert len(mode_radio.options) == 3
+        assert any("question" in opt.lower() for opt in mode_radio.options)
+        assert any("quiz" in opt.lower() for opt in mode_radio.options)
+        assert any("jeu de donnees" in opt.lower() for opt in mode_radio.options)
+
+    def test_mode_question_sans_cle_gemini_affiche_un_message_informatif(self, at):
+        """Sans GEMINI_API_KEY configuree dans cet environnement de test, le
+        mode Q&A doit informer plutot que planter."""
+        _goto_academic(at)
+        assert not at.exception
+        info_texts = " ".join(i.value for i in at.info)
+        assert "cle Gemini" in info_texts or "GEMINI_API_KEY" in info_texts
+
+    def test_mode_eda_affiche_un_uploader_de_fichier(self, at):
+        _goto_academic(at)
+        mode_radio = next(r for r in at.radio if r.label == "Mode")
+        eda_option = next(opt for opt in mode_radio.options if "jeu de donnees" in opt.lower())
+        mode_radio.set_value(eda_option).run(timeout=60)
+        assert not at.exception
+        assert len(at.get("file_uploader")) >= 1
+
+
+class TestMiniQuizAcademique:
+    def _passer_en_mode_quiz(self, app_test):
+        mode_radio = next(r for r in app_test.radio if r.label == "Mode")
+        quiz_option = next(opt for opt in mode_radio.options if "quiz" in opt.lower())
+        mode_radio.set_value(quiz_option).run(timeout=60)
+        return app_test
+
+    def test_premiere_question_affichee_avec_score_a_zero(self, at):
+        _goto_academic(at)
+        self._passer_en_mode_quiz(at)
+        assert not at.exception
+        texte = " ".join(m.value for m in at.markdown)  # st.write() rend via markdown
+        assert "Question 1/5" in texte
+        assert "Score actuel : 0/5" in texte
+
+    def test_bonne_reponse_incremente_le_score(self, at):
+        _goto_academic(at)
+        self._passer_en_mode_quiz(at)
+        quiz_radio = next(r for r in at.radio if r.label == "Votre reponse")
+        # La question 1 a l'index 1 comme bonne reponse (voir QUIZ_ML dans app.py).
+        quiz_radio.set_value(quiz_radio.options[1]).run(timeout=60)
+        _click_button_containing(at, "Valider")
+        assert not at.exception
+        success_texts = " ".join(s.value for s in at.success)
+        assert "Correct" in success_texts
+
+    def test_mauvaise_reponse_affiche_lexplication_sans_incrementer(self, at):
+        _goto_academic(at)
+        self._passer_en_mode_quiz(at)
+        quiz_radio = next(r for r in at.radio if r.label == "Votre reponse")
+        quiz_radio.set_value(quiz_radio.options[0]).run(timeout=60)  # index 0 = toujours faux ici
+        _click_button_containing(at, "Valider")
+        assert not at.exception
+        error_texts = " ".join(e.value for e in at.error)
+        assert "Pas tout a fait" in error_texts
+
+
+# ======================================================================
+# Module Fraude Transactionnelle (prototype) - jusqu'ici sans couverture
+# ======================================================================
+class TestModuleFraudeTransactionnelle:
+    def test_choix_module_transactions_affiche_ses_propres_kpis(self, at):
+        _goto_transactions(at)
+        assert not at.exception
+        assert len(at.tabs) == 0  # pas d'onglets ici, le module est en sections verticales
+        markdown_html = " ".join(m.value for m in at.markdown)
+        assert markdown_html.count("kpi-value") >= 3  # au moins accuracy/F1/AUC du modele
+
+    def test_formulaire_transaction_unique_contient_les_8_champs_du_schema(self, at):
+        """Montant, Ecart_Montant_Habituel, Frequence_24h, Delai, Nb_Destinataires
+        (5 number_input) + Nouveau_Destinataire, Changement_Appareil (2 selectbox)
+        + Heure_Transaction (1 slider) = 8 champs, voir TransactionIn dans
+        api/schemas.py et src/transaction_fraud/generate_synthetic_data.py."""
+        _goto_transactions(at)
+        assert len(at.number_input) == 5
+        assert len(at.selectbox) == 2
+        assert len(at.slider) == 1
+
+    def test_soumission_formulaire_affiche_un_resultat_avec_avertissement_prototype(self, at):
+        _goto_transactions(at)
+        _click_button_containing(at, "Evaluer la transaction")
+        assert not at.exception
+        markdown_html = " ".join(m.value for m in at.markdown)
+        assert "Legitime" in markdown_html or "Suspecte" in markdown_html
+        caption_texts = " ".join(c.value for c in at.caption)
+        assert "prototype" in caption_texts.lower()
+
+    def test_bouton_telechargement_exemple_synthetique_present(self, at):
+        _goto_transactions(at)
+        téléchargements = [d.label for d in at.get("download_button")]
+        assert any("exemple" in (d or "").lower() for d in téléchargements)
+
+    def test_changer_de_module_revient_a_lecran_de_selection(self, at):
+        _goto_transactions(at)
+        _click_button_containing(at, "Changer de module")
+        assert not at.exception
+        boutons = [b.label or "" for b in at.get("button")]
+        assert any("Ouvrir Fraude Transactionnelle" in b for b in boutons)
+        assert any("Ouvrir Securite Reseau" in b for b in boutons)

@@ -416,6 +416,14 @@ version installée à chaque démarrage de service (`api/model_service.py`,
 démarrage) en cas d'écart - utile en particulier si l'environnement de déploiement (Render,
 Streamlit Cloud) réinstalle une version différente de celle utilisée localement.
 
+## Migration du paramètre Streamlit `width`
+
+Les 36 usages de `use_container_width=True/False` dans `app/app.py` ont été remplacés par
+`width="stretch"`/`width="content"` : `use_container_width` est déprécié par Streamlit depuis fin
+2025 (date de retrait déjà passée au moment de cette migration) - découvert via un warning émis
+pendant l'exécution des tests Streamlit de l'Espace Académique, corrigé avant que Streamlit Cloud
+ne mette à jour vers une version où l'ancien paramètre ne fonctionnerait plus du tout.
+
 ## Exécuter la suite de tests
 
 ```bash
@@ -427,8 +435,10 @@ python3 -m pytest tests/ -v
 109 tests (pipeline ML réseau, API - Organisation historique, Grand Public, jeu de vigilance gamifié,
 assistance à l'analyse Lieutenant Cyber, 5 modes d'authentification dont l'auto-inscription self_signup,
 application Streamlit dont l'écran de connexion/création de compte, écran de sélection de module de
-l'Espace Organisation, redirection de l'Espace Grand Public vers la version web) + 33 tests de
-persistance PostgreSQL/JSON (voir ci-dessous) s'exécutent en moins de 30 secondes au total.
+l'Espace Organisation et de l'Espace Académique, redirection de l'Espace Grand Public vers la version
+web, Mini-quiz ML, module Fraude Transactionnelle) + 33 tests de persistance PostgreSQL/JSON + 8 tests
+API de fraude transactionnelle + 11 tests structurels du dashboard SOC web = **175 tests, 1 skip
+attendu**, s'exécutent en moins de 30 secondes au total.
 
 `tests/test_streamlit_app.py` a été resynchronisé avec deux restructurations de l'interface qui
 l'avaient rendu obsolète sans mise à jour immédiate (19 tests étaient en échec avant correction,
@@ -437,15 +447,27 @@ voir le journal Git pour le détail) : l'entrée dans l'Espace Organisation pass
 au lieu de 5), et l'Espace Grand Public Streamlit est déprécié - la carte d'accueil pointe
 désormais vers la version web indépendante (Vercel) via un lien externe plutôt qu'un onglet interne.
 
-**⚠️ Couverture incomplète, honnêtement signalée** : cette suite ne couvre pas encore le module Fraude
-Transactionnelle, l'Espace Académique, ni le dashboard SOC web (`web/dashboard.html`) - fonctionnalités
-ajoutées après la suite de tests initiale, validées manuellement mais sans tests automatisés dédiés à
-ce jour. Le jeu de vigilance gamifié et l'assistant Lieutenant Cyber, désormais implémentés en HTML/JS
-pur sur la version web (Vercel) plutôt qu'en Streamlit, ne sont plus couverts par cette suite
-pytest/AppTest non plus - une couverture équivalente y nécessiterait un outil de test web (ex.
-Playwright). À ajouter avant tout usage en production.
+**Les 3 trous de couverture précédemment signalés sont désormais comblés :**
 
-**Persistance PostgreSQL (`core/db.py`, `core/alert_log.py`)** : couverte depuis peu par
+- **Module Fraude Transactionnelle** : navigation Streamlit (`TestModuleFraudeTransactionnelle`
+  dans `test_streamlit_app.py`) + endpoints API (`tests/test_api_transactions.py`, 8 tests -
+  prédiction unique, lot CSV, validation des bornes, isolation du journal d'alertes par domaine)
+- **Espace Académique** : `TestEspaceAcademique` + `TestMiniQuizAcademique` dans
+  `test_streamlit_app.py` - accès sans authentification, KPIs du modèle, les 3 modes (Q&A,
+  quiz, EDA), logique de score du quiz (bonne/mauvaise réponse)
+- **Dashboard SOC web** (`web/dashboard.html`) : `tests/test_dashboard_web.py` (11 tests) -
+  analyse statique sans navigateur (validité syntaxique JS via `node --check`, équilibre des
+  balises HTML/accolades CSS, cohérence des IDs référencés par `getElementById()` vs définis
+  dans le HTML ou injectés dynamiquement, correspondance canvases Chart.js ↔ graphiques
+  instanciés, absence d'URL d'API codée en dur hors de `config.js`). Une couverture
+  fonctionnelle complète (clics, rendu visuel réel) resterait hors de portée de pytest et
+  nécessiterait un outil navigateur (ex. Playwright) - non implémenté ici.
+
+Le jeu de vigilance gamifié et l'assistant Lieutenant Cyber conversationnel, désormais implémentés
+en HTML/JS pur sur la version web (Vercel) plutôt qu'en Streamlit, restent hors de portée de cette
+suite pytest/AppTest pour la même raison (nécessiteraient Playwright).
+
+**Persistance PostgreSQL (`core/db.py`, `core/alert_log.py`)** : couverte par
 `tests/test_persistence_postgresql.py` (33 tests) - connexion mockée (aucune base réelle requise
 pour l'essentiel de la suite), isolation stricte entre domaines réseau/transactions, repli JSON,
 et toute la logique métier pure (score de sécurité, MTTR, tendance, répartition de gravité). Un
