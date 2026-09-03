@@ -58,6 +58,7 @@ IOT_INT_TO_LABEL = {v: k for k, v in IOT_CLASS_TO_INT.items()}
 from core.sensitivity import get_threshold, set_threshold
 from core.enriched_model import get_enriched_model_status, generate_enriched_model
 from core.schema_router import detect_schema, SCHEMAS
+from core.export_enrichi import calculer_priorite, generer_recommandations_ia, construire_excel_enrichi
 
 OUT_DIR = BASE_DIR / "outputs"
 MODEL_DIR = OUT_DIR / "models"
@@ -1029,8 +1030,34 @@ def render_reseau_module():
             st.markdown("**Detail des flux (top 200 affiches)**")
             st.dataframe(df_results.head(200), width="stretch")
 
-            csv_out = df_results.to_csv(index=False).encode("utf-8")
-            st.download_button("Telecharger les resultats (CSV)", csv_out, "resultats_analyse.csv", "text/csv")
+            st.markdown("**📥 Export enrichi (priorite, tri automatique, coloration)**")
+            niveau_ia = st.radio(
+                "Recommandations IA sur les cas les plus prioritaires",
+                ["Aucune (rapide)", "Top 5", "Top 10"], horizontal=True, key="ia_export_reseau",
+            )
+            if st.button("Generer le fichier Excel", key="gen_excel_reseau"):
+                poids_gravite_reseau = {
+                    "Normal / Legitime": 0, "Scan de Ports / Reconnaissance": 1,
+                    "Attaque DDoS / Volumetrique": 2, "Infiltration / Brute-Force / Exfiltration": 3,
+                }
+                recommandations = None
+                if niveau_ia != "Aucune (rapide)" and GENAI_AVAILABLE and get_gemini_key():
+                    n_top = 5 if niveau_ia == "Top 5" else 10
+                    df_priorise_apercu = calculer_priorite(df_results, "Menace_Predite", "Confiance (%)", poids_gravite_reseau)
+                    client = genai.Client(api_key=get_gemini_key())
+                    with st.spinner(f"Lieutenant Cyber analyse les {n_top} cas les plus prioritaires..."):
+                        avis_list = generer_recommandations_ia(
+                            df_priorise_apercu.head(n_top), "Menace_Predite", "Confiance (%)",
+                            ask_gemini, client, ORG_ANALYST_SYSTEM_PROMPT,
+                        )
+                    recommandations = {i: avis_list[i] for i in range(len(avis_list))}
+                excel_bytes = construire_excel_enrichi(
+                    df_results, "Menace_Predite", "Confiance (%)", poids_gravite_reseau,
+                    recommandations_top_n=recommandations,
+                )
+                st.download_button("📥 Telecharger le fichier Excel enrichi", excel_bytes,
+                                    "resultats_analyse_priorises.xlsx",
+                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
             st.markdown("---")
             render_lieutenant_cyber_explain_batch(n_flows, n_threats, rate, dist)
@@ -1726,8 +1753,36 @@ def render_iot_module():
 
             st.markdown("**Detail des flux (top 200 affiches)**")
             st.dataframe(iot_data["df_results"].head(200), width="stretch")
-            csv_iot_out = iot_data["df_results"].to_csv(index=False).encode("utf-8")
-            st.download_button("Telecharger les resultats (CSV)", csv_iot_out, "resultats_iot.csv", "text/csv")
+
+            st.markdown("**📥 Export enrichi (priorite, tri automatique, coloration)**")
+            niveau_ia_iot = st.radio(
+                "Recommandations IA sur les cas les plus prioritaires",
+                ["Aucune (rapide)", "Top 5", "Top 10"], horizontal=True, key="ia_export_iot",
+            )
+            if st.button("Generer le fichier Excel", key="gen_excel_iot"):
+                # Gravite adaptee aux 7 familles de menaces IIoT (0=benign, 1=faible ... 3=critique)
+                poids_gravite_iot = {
+                    "benign": 0, "recon": 1, "bruteforce": 1, "web": 2,
+                    "dos": 2, "ddos": 2, "malware": 3, "mitm": 3,
+                }
+                recommandations_iot = None
+                if niveau_ia_iot != "Aucune (rapide)" and GENAI_AVAILABLE and get_gemini_key():
+                    n_top = 5 if niveau_ia_iot == "Top 5" else 10
+                    df_priorise_apercu_iot = calculer_priorite(iot_data["df_results"], "Prediction", "Confiance (%)", poids_gravite_iot)
+                    client = genai.Client(api_key=get_gemini_key())
+                    with st.spinner(f"Lieutenant Cyber analyse les {n_top} cas les plus prioritaires..."):
+                        avis_list_iot = generer_recommandations_ia(
+                            df_priorise_apercu_iot.head(n_top), "Prediction", "Confiance (%)",
+                            ask_gemini, client, ORG_ANALYST_SYSTEM_PROMPT,
+                        )
+                    recommandations_iot = {i: avis_list_iot[i] for i in range(len(avis_list_iot))}
+                excel_bytes_iot = construire_excel_enrichi(
+                    iot_data["df_results"], "Prediction", "Confiance (%)", poids_gravite_iot,
+                    recommandations_top_n=recommandations_iot,
+                )
+                st.download_button("📥 Telecharger le fichier Excel enrichi", excel_bytes_iot,
+                                    "resultats_iot_priorises.xlsx",
+                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
     except FileNotFoundError:
         st.error(
@@ -1874,8 +1929,33 @@ def render_transactions_module():
 
             st.markdown("**Detail des transactions (top 200 affiches)**")
             st.dataframe(tx_data["df_results"].head(200), width="stretch")
-            csv_tx_out = tx_data["df_results"].to_csv(index=False).encode("utf-8")
-            st.download_button("Telecharger les resultats (CSV)", csv_tx_out, "resultats_transactions.csv", "text/csv")
+
+            st.markdown("**📥 Export enrichi (priorite, tri automatique, coloration)**")
+            niveau_ia_tx = st.radio(
+                "Recommandations IA sur les cas les plus prioritaires",
+                ["Aucune (rapide)", "Top 5", "Top 10"], horizontal=True, key="ia_export_tx",
+            )
+            if st.button("Generer le fichier Excel", key="gen_excel_tx"):
+                poids_gravite_tx = {"Legitime": 0, "Suspecte": 2}
+                recommandations_tx = None
+                if niveau_ia_tx != "Aucune (rapide)" and GENAI_AVAILABLE and get_gemini_key():
+                    n_top = 5 if niveau_ia_tx == "Top 5" else 10
+                    df_priorise_apercu_tx = calculer_priorite(tx_data["df_results"], "Prediction", "Confiance (%)", poids_gravite_tx)
+                    client = genai.Client(api_key=get_gemini_key())
+                    with st.spinner(f"Lieutenant Cyber analyse les {n_top} cas les plus prioritaires..."):
+                        avis_list_tx = generer_recommandations_ia(
+                            df_priorise_apercu_tx.head(n_top), "Prediction", "Confiance (%)",
+                            ask_gemini, client, ORG_ANALYST_SYSTEM_PROMPT,
+                        )
+                    recommandations_tx = {i: avis_list_tx[i] for i in range(len(avis_list_tx))}
+                excel_bytes_tx = construire_excel_enrichi(
+                    tx_data["df_results"], "Prediction", "Confiance (%)", poids_gravite_tx,
+                    recommandations_top_n=recommandations_tx,
+                )
+                st.download_button("📥 Telecharger le fichier Excel enrichi", excel_bytes_tx,
+                                    "resultats_transactions_priorises.xlsx",
+                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
             st.caption("⚠️ Rappel : evaluation par un modele prototype sur donnees synthetiques - "
                        "ne pas utiliser pour de vraies decisions.")
 
