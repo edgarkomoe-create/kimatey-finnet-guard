@@ -49,6 +49,7 @@ from api.auth import register_user, verify_user_credentials, create_token, Email
 from api.transaction_model_service import get_transaction_model_service
 from core.sensitivity import get_threshold, set_threshold
 from core.enriched_model import get_enriched_model_status, generate_enriched_model
+from core.schema_router import detect_schema, SCHEMAS
 
 OUT_DIR = BASE_DIR / "outputs"
 MODEL_DIR = OUT_DIR / "models"
@@ -312,18 +313,6 @@ def preprocess_raw_df(df_raw):
         df[col] = df[col].clip(lower=low, upper=high)
     df_scaled = pd.DataFrame(SCALER.transform(df[FEATURES]), columns=FEATURES, index=df.index)
     return df_scaled[SELECTED_FEATURES]
-
-
-def check_schema_compatibility(df_raw):
-    """Verifie qu'un fichier importe contient reellement au moins une partie des
-    variables attendues, AVANT tout traitement - pour ne jamais laisser
-    preprocess_raw_df imputer silencieusement 100% des colonnes manquantes (ce
-    qui produirait un resultat uniforme et denue de sens, sans que l'utilisateur
-    en soit informe). Retourne (colonnes_trouvees, colonnes_manquantes, taux_couverture)."""
-    colonnes_trouvees = [c for c in FEATURES if c in df_raw.columns]
-    colonnes_manquantes = [c for c in FEATURES if c not in df_raw.columns]
-    taux_couverture = len(colonnes_trouvees) / len(FEATURES)
-    return colonnes_trouvees, colonnes_manquantes, taux_couverture
 
 
 def predict_with_confidence(df_raw):
@@ -846,30 +835,42 @@ def render_reseau_module():
             st.dataframe(df_logs.head(10), width="stretch")
 
             # ---- Verification de compatibilite de schema AVANT tout traitement -----
-            # Sans ce controle, un fichier dont aucune colonne ne correspond aux 9
-            # variables attendues serait quand meme "analyse" : toutes les valeurs
-            # manquantes seraient silencieusement remplacees par la mediane du jeu
-            # d'entrainement, produisant un resultat uniforme (souvent "0 menace
-            # detectee") qui n'a jamais reellement examine les donnees importees.
-            colonnes_trouvees, colonnes_manquantes, taux_couverture = check_schema_compatibility(df_logs)
-            if taux_couverture == 0:
+            # Utilise le routeur multi-schemas (core/schema_router.py) : si le fichier
+            # correspond mieux a un AUTRE domaine connu (ex. Transactions), on le signale
+            # explicitement plutot que de simplement rejeter. Sans ce controle, un fichier
+            # incompatible serait quand meme "analyse" : les colonnes manquantes seraient
+            # silencieusement remplacees par la mediane du jeu d'entrainement, produisant
+            # un resultat uniforme (souvent "0 menace detectee") qui n'a jamais reellement
+            # examine les donnees importees.
+            diagnostic = detect_schema(df_logs.columns)
+            if diagnostic["meilleur_schema"] is None:
                 st.error(
-                    "⚠️ **Aucune des 9 colonnes attendues par le modele n'a ete trouvee dans ce fichier.** "
-                    "Ce systeme est specialise sur un format precis de flux reseau (voir la liste "
-                    "ci-dessous) - il ne peut pas analyser un jeu de donnees avec un schema different "
-                    "(ex. logs d'appareils IoT, journaux d'evenements, etc.), meme si ce fichier "
-                    "contient de vraies attaques etiquetees. Poursuivre l'analyse produirait un "
-                    "resultat denue de sens (toutes les lignes traitees de facon identique)."
+                    "⚠️ **Aucun schema connu du systeme ne correspond a ce fichier.** "
+                    "Ce systeme est specialise sur des formats de donnees precis, enregistres "
+                    "explicitement - il ne peut pas analyser un jeu de donnees d'un domaine "
+                    "different (ex. logs d'appareils IoT), meme si ce fichier contient de "
+                    "vraies attaques etiquetees. Poursuivre produirait un resultat denue de "
+                    "sens (toutes les lignes traitees de facon identique)."
                 )
-                with st.expander("Colonnes attendues par ce modele"):
-                    st.code(", ".join(FEATURES))
+                with st.expander("Schemas actuellement reconnus par le systeme"):
+                    for nom, cfg in SCHEMAS.items():
+                        st.write(f"**{cfg['label']}** ({nom}) : {cfg['description']}")
+                        st.code(", ".join(cfg["features"]))
                 st.stop()
-            elif taux_couverture < 0.5:
+            elif diagnostic["meilleur_schema"] != "reseau":
+                schema_suggere = SCHEMAS[diagnostic["meilleur_schema"]]["label"]
+                st.error(
+                    f"⚠️ **Ce fichier ressemble davantage au schema '{schema_suggere}'** "
+                    f"({diagnostic['taux_couverture']*100:.0f}% de correspondance) qu'au schema "
+                    "Securite Reseau attendu ici. Importez-le plutot dans le module correspondant."
+                )
+                st.stop()
+            elif diagnostic["taux_couverture"] < 1.0:
                 st.warning(
-                    f"⚠️ Seulement {len(colonnes_trouvees)}/{len(FEATURES)} colonnes attendues trouvees "
-                    f"dans ce fichier - colonnes manquantes : {', '.join(colonnes_manquantes)}. "
-                    "Les colonnes manquantes seront remplacees par une valeur mediane par defaut, ce "
-                    "qui degrade fortement la fiabilite du resultat. A n'utiliser qu'a titre indicatif."
+                    f"⚠️ Seulement {diagnostic['taux_couverture']*100:.0f}% des colonnes attendues "
+                    f"trouvees - colonnes manquantes : {', '.join(diagnostic['colonnes_manquantes'])}. "
+                    "Elles seront remplacees par une valeur mediane par defaut, ce qui degrade la "
+                    "fiabilite du resultat. A n'utiliser qu'a titre indicatif."
                 )
 
             enrichment = detect_enrichment_columns(df_logs)
@@ -1661,6 +1662,22 @@ def render_transactions_module():
             df_tx_batch = pd.read_csv(uploaded_tx)
             st.write(f"**{len(df_tx_batch)} transactions chargees.**")
             st.dataframe(df_tx_batch.head(10), width="stretch")
+
+            diagnostic_tx = detect_schema(df_tx_batch.columns)
+            if diagnostic_tx["meilleur_schema"] is None:
+                st.error("⚠️ **Aucun schema connu ne correspond a ce fichier.** Il ne sera pas analyse.")
+                st.stop()
+            elif diagnostic_tx["meilleur_schema"] != "transactions":
+                st.error(
+                    f"⚠️ **Ce fichier ressemble davantage au schema '{SCHEMAS[diagnostic_tx['meilleur_schema']]['label']}'** "
+                    "- importez-le plutot dans le module correspondant."
+                )
+                st.stop()
+            elif diagnostic_tx["taux_couverture"] < 1.0:
+                st.warning(
+                    f"⚠️ Colonnes manquantes : {', '.join(diagnostic_tx['colonnes_manquantes'])} - "
+                    "remplacees par une valeur par defaut, resultat a n'utiliser qu'a titre indicatif."
+                )
 
             if st.button("Lancer l'analyse du lot", type="primary", key="tx_batch_analyze"):
                 preds, confs, probas = tx_service.predict(df_tx_batch)
