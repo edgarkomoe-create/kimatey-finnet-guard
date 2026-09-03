@@ -40,17 +40,24 @@ SCHEMAS = {
         ],
         "modele_disponible": True,
     },
-    # "iot": {
-    #     "label": "Securite IIoT Industrielle",
-    #     "description": "Flux IIoT (Datasense-IIoT-2025) - 41 variables retenues apres reduction
-    #                      VIF (multicolinearite), cible multi-classe (~33 familles d'attaques :
-    #                      recon/scan, usurpation ARP/IP, Mirai, injection, floods varies + benign).
-    #                      Travail en cours - voir docs/ROADMAP_MODELES_ADDITIONNELS.md, section 0.
-    #                      A activer une fois le pipeline d'entrainement complet (src/iot_security/)
-    #                      et les artefacts (.joblib) disponibles.",
-    #     "features": [...],  # les 41 variables post-VIF, a lister une fois l'export recu
-    #     "modele_disponible": False,
-    # },
+    "iot": {
+        "label": "Securite IIoT Industrielle",
+        "description": "Flux IIoT (compteurs reseau/log agreges par fenetre de capture, "
+                        "timestamps de debut/fin, statistiques de paquets...)",
+        "features": [
+            "log_data-ranges_min", "log_data-ranges_std_deviation", "log_data-types_count",
+            "log_interval-messages", "log_messages_count", "network_fragmented-packets",
+            "network_interval-packets", "network_ip-flags_min", "network_ips_dst_count",
+            "network_macs_all_count", "network_mss_min", "network_packet-size_min",
+            "network_packets_dst_count", "network_payload-length_min", "network_payload-length_std_deviation",
+            "network_ports_dst_count", "network_ports_src_count", "network_protocols_dst_count",
+            "network_protocols_src_count", "network_tcp-flags-psh_count", "network_tcp-flags-rst_count",
+            "network_tcp-flags-syn_count", "network_tcp-flags-urg_count", "network_tcp-flags_max",
+            "network_time-delta_max", "network_time-delta_min", "network_time-delta_std_deviation",
+            "network_ttl_min", "network_ttl_std_deviation", "network_window-size_min",
+        ],
+        "modele_disponible": True,
+    },
 }
 
 

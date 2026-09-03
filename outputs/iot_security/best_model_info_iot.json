@@ -1,0 +1,120 @@
+{
+  "name": "Foret_Aleatoire",
+  "strategie_desequilibre": "class_weight",
+  "f1_macro_cv": 0.946619780636024,
+  "f1_macro_test": 0.956177703443587,
+  "best_params": {
+    "max_depth": "None",
+    "n_estimators": "100"
+  },
+  "features_used": [
+    "log_data-ranges_min",
+    "log_data-ranges_std_deviation",
+    "log_data-types_count_par_sec",
+    "log_interval-messages",
+    "log_messages_count_par_sec",
+    "network_fragmented-packets_par_sec",
+    "network_interval-packets",
+    "network_ip-flags_min",
+    "network_ips_dst_count_par_sec",
+    "network_macs_all_count_par_sec",
+    "network_mss_min",
+    "network_packet-size_min",
+    "network_packets_dst_count_par_sec",
+    "network_payload-length_min",
+    "network_payload-length_std_deviation",
+    "network_ports_dst_count_par_sec",
+    "network_ports_src_count_par_sec",
+    "network_protocols_dst_count_par_sec",
+    "network_protocols_src_count_par_sec",
+    "network_tcp-flags-psh_count_par_sec",
+    "network_tcp-flags-rst_count_par_sec",
+    "network_tcp-flags-syn_count_par_sec",
+    "network_tcp-flags-urg_count_par_sec",
+    "network_tcp-flags_max",
+    "network_time-delta_max",
+    "network_time-delta_min",
+    "network_time-delta_std_deviation",
+    "network_ttl_min",
+    "network_ttl_std_deviation",
+    "network_window-size_min"
+  ],
+  "target": "label2",
+  "classes": [
+    "benign",
+    "bruteforce",
+    "ddos",
+    "dos",
+    "malware",
+    "mitm",
+    "recon",
+    "web"
+  ],
+  "classification_report": {
+    "benign": {
+      "precision": 0.9994520547945206,
+      "recall": 1.0,
+      "f1-score": 0.9997259523157029,
+      "support": 27360.0
+    },
+    "bruteforce": {
+      "precision": 0.9074074074074074,
+      "recall": 0.9245283018867925,
+      "f1-score": 0.9158878504672897,
+      "support": 53.0
+    },
+    "ddos": {
+      "precision": 0.9552572706935123,
+      "recall": 0.9085106382978724,
+      "f1-score": 0.9312977099236641,
+      "support": 470.0
+    },
+    "dos": {
+      "precision": 0.9730290456431535,
+      "recall": 0.9770833333333333,
+      "f1-score": 0.975051975051975,
+      "support": 480.0
+    },
+    "malware": {
+      "precision": 0.9577464788732394,
+      "recall": 0.966824644549763,
+      "f1-score": 0.9622641509433962,
+      "support": 211.0
+    },
+    "mitm": {
+      "precision": 0.9298245614035088,
+      "recall": 0.9680365296803652,
+      "f1-score": 0.9485458612975392,
+      "support": 219.0
+    },
+    "recon": {
+      "precision": 0.9811320754716981,
+      "recall": 0.9855072463768116,
+      "f1-score": 0.9833147942157954,
+      "support": 897.0
+    },
+    "web": {
+      "precision": 1.0,
+      "recall": 0.875,
+      "f1-score": 0.9333333333333333,
+      "support": 80.0
+    },
+    "accuracy": 0.9968088679879072,
+    "macro avg": {
+      "precision": 0.96298111178588,
+      "recall": 0.9506863367656173,
+      "f1-score": 0.956177703443587,
+      "support": 29770.0
+    },
+    "weighted avg": {
+      "precision": 0.9968060876248933,
+      "recall": 0.9968088679879072,
+      "f1-score": 0.996783617724989,
+      "support": 29770.0
+    }
+  },
+  "n_train": 119080,
+  "n_test": 29770,
+  "sklearn_version": "1.8.0",
+  "note_methodologique": "Variables de type compteur brut normalisees par la duree reelle de capture (colonne timestamp_start/timestamp_end) avant entrainement, pour eliminer un biais systematique : les captures benign duraient exactement 1s, les captures d attaque exactement 7s dans le jeu de donnees source."
+}

@@ -35,11 +35,13 @@ from api.schemas import (
     ExplainFlowRequest, ExplainBatchRequest, ExplainResponse,
     PublicProgressIn, PublicProgressOut, TendancesResponse,
     TransactionIn, TransactionPredictionResponse, TransactionBatchSummary,
+    IotPredictionResponse, IotBatchSummary,
     PassInfo, ActivePassResponse, SouscrirePassRequest, SensitivityResponse, SetSensitivityRequest,
     EnrichedModelStatus, AlertOut, SocDashboardResponse, ToggleAlertResponse,
     DashboardCommentRequest, DashboardCommentResponse,
 )
 from api.transaction_model_service import get_transaction_model_service
+from api.iot_model_service import get_iot_model_service
 from core.pass_system import (
     get_catalog, get_active_pass, souscrire as pass_souscrire, check_and_increment_quota,
 )
@@ -675,6 +677,53 @@ async def predict_transaction_csv(file: UploadFile = File(..., description="CSV 
 
 
 # ==================================================================
+# Securite IIoT (4e domaine) - modele entraine sur un echantillon reel
+# (148 850 lignes), voir api/iot_model_service.py pour le detail complet.
+# ==================================================================
+# Mapping entier <-> classe pour reutiliser log_alerts_bulk (qui attend un
+# entier, 0 = pas une menace) - benign toujours a l'indice 0, les autres
+# classes dans l'ordre alphabetique (coherent avec service.info['classes']).
+IOT_CLASS_TO_INT = {"benign": 0, "bruteforce": 1, "ddos": 2, "dos": 3, "malware": 4, "mitm": 5, "recon": 6, "web": 7}
+IOT_INT_TO_LABEL = {v: k for k, v in IOT_CLASS_TO_INT.items()}
+
+
+@app.post(
+    "/predict_iot", response_model=IotPredictionResponse, tags=["Prediction"],
+    summary="Predire la categorie d'un flux IIoT unique (Securite IIoT)",
+    dependencies=[Depends(require_org_auth)],
+)
+def predict_iot(payload: dict):
+    service = get_iot_model_service()
+    df = pd.DataFrame([payload])
+    preds, confs, probas = service.predict(df)
+    return IotPredictionResponse(**service.format_prediction(preds[0], confs[0]))
+
+
+@app.post(
+    "/predict_iot_csv", response_model=IotBatchSummary, tags=["Prediction"],
+    summary="Predire la categorie d'un lot de flux IIoT (CSV, schema IIoT)",
+    dependencies=[Depends(require_org_auth)],
+)
+async def predict_iot_csv(file: UploadFile = File(..., description="CSV de flux IIoT (colonnes du schema IIoT)")):
+    service = get_iot_model_service()
+    df = pd.read_csv(file.file)
+    preds, confs, probas = service.predict(df)
+    n_menaces = int(sum(1 for p in preds if p != "benign"))
+
+    entries_to_log = [
+        {"source": f"Import CSV IIoT (API) - ligne {i+1}", "pred_class": IOT_CLASS_TO_INT.get(p, 0), "confidence": float(confs[i])}
+        for i, p in enumerate(preds[:500])
+    ]
+    log_alerts_bulk(entries_to_log, domaine="iot", class_names=IOT_INT_TO_LABEL)
+
+    return IotBatchSummary(
+        n_total=len(df),
+        n_menaces=n_menaces,
+        taux_menace=round(n_menaces / len(df) * 100, 1) if len(df) > 0 else 0.0,
+    )
+
+
+# ==================================================================
 # Systeme de Pass (MODE DEMO - aucun paiement reel encaisse, voir
 # docs/ROADMAP_PAIEMENT.md pour l'integration Orange Money/MTN Mobile Money)
 # ==================================================================
@@ -828,6 +877,25 @@ def organisation_dashboard_soc():
 )
 def organisation_dashboard_transactions():
     return _build_soc_dashboard(domaine="transactions")
+
+
+@app.get(
+    "/organisation/dashboard_iot", response_model=SocDashboardResponse, tags=["Organisation"],
+    summary="Etat operationnel complet (score, alertes, tendances) pour le dashboard - Securite IIoT",
+    dependencies=[Depends(require_org_auth)],
+)
+def organisation_dashboard_iot():
+    return _build_soc_dashboard(domaine="iot")
+
+
+@app.post(
+    "/organisation/dashboard_iot/toggle/{alert_id}", response_model=ToggleAlertResponse, tags=["Organisation"],
+    summary="Bascule le statut Ouvert/Ferme d'une alerte IIoT, retourne le dashboard mis a jour",
+    dependencies=[Depends(require_org_auth)],
+)
+def organisation_dashboard_iot_toggle(alert_id: str):
+    found = toggle_alert_status(alert_id, domaine="iot")
+    return ToggleAlertResponse(found=found, dashboard=_build_soc_dashboard(domaine="iot"))
 
 
 @app.post(

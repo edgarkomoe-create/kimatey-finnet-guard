@@ -22,6 +22,12 @@ const DOMAIN_CONFIG = {
     eyebrow: "Fraude Transactionnelle &middot; Espace Organisation (Prototype)",
     bannerGood: "🟢 Aucune transaction suspecte en attente",
   },
+  iot: {
+    endpoint: "/organisation/dashboard_iot",
+    toggleEndpoint: "/organisation/dashboard_iot/toggle/",
+    eyebrow: "Securite IIoT &middot; Espace Organisation",
+    bannerGood: "🟢 Aucune menace IIoT en attente",
+  },
 };
 
 const PLAIN_LANGUAGE = {
@@ -29,12 +35,26 @@ const PLAIN_LANGUAGE = {
   "Attaque DDoS / Volumetrique": "une tentative de surcharge de votre systeme",
   "Infiltration / Brute-Force / Exfiltration": "une tentative d'intrusion grave",
   "Suspecte": "une transaction mobile money qui ressemble a une fraude",
+  "recon": "une exploration suspecte de vos objets connectes",
+  "dos": "une tentative de saturation d'un appareil",
+  "ddos": "une tentative de saturation distribuee",
+  "mitm": "une tentative d'interception de vos communications",
+  "malware": "un logiciel malveillant detecte sur le reseau",
+  "web": "une attaque applicative (injection...)",
+  "bruteforce": "une tentative de force brute sur des identifiants",
 };
 const SEVERITY_COLORS = {
   "Scan de Ports / Reconnaissance": "#f5a524",
   "Attaque DDoS / Volumetrique": "#e74c3c",
   "Infiltration / Brute-Force / Exfiltration": "#8e44ad",
   "Suspecte": "#e74c3c",
+  "recon": "#f5a524",
+  "dos": "#e67e22",
+  "ddos": "#e74c3c",
+  "mitm": "#8e44ad",
+  "malware": "#c0392b",
+  "web": "#3498db",
+  "bruteforce": "#d35400",
 };
 
 function getToken() { return localStorage.getItem(DASH_TOKEN_KEY); }
@@ -122,7 +142,7 @@ document.querySelectorAll(".domain-toggle-btn").forEach((btn) => {
 // selecteur ne reste visible qu'en cas d'acces direct (pas de contexte fourni).
 const urlParams = new URLSearchParams(window.location.search);
 const urlDomain = urlParams.get("domaine");
-if (urlDomain === "reseau" || urlDomain === "transactions") {
+if (urlDomain === "reseau" || urlDomain === "transactions" || urlDomain === "iot") {
   currentDomain = urlDomain;
   document.getElementById("header-eyebrow").innerHTML = DOMAIN_CONFIG[currentDomain].eyebrow;
   document.querySelector(".domain-toggle").style.display = "none";

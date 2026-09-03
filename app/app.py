@@ -47,6 +47,14 @@ from core.kimatey_core import (
 # entre "qui peut se connecter sur l'API" et "qui peut se connecter dans l'appli".
 from api.auth import register_user, verify_user_credentials, create_token, EmailDejaUtilise
 from api.transaction_model_service import get_transaction_model_service
+from api.iot_model_service import get_iot_model_service
+
+# Mapping entier <-> classe pour le domaine IIoT (benign=0, coherent avec le
+# reste du systeme ou 0 = pas une menace) - duplique volontairement la meme
+# constante que api/main.py plutot que d'importer ce module (eviterait de
+# declencher toute l'initialisation FastAPI depuis Streamlit).
+IOT_CLASS_TO_INT = {"benign": 0, "bruteforce": 1, "ddos": 2, "dos": 3, "malware": 4, "mitm": 5, "recon": 6, "web": 7}
+IOT_INT_TO_LABEL = {v: k for k, v in IOT_CLASS_TO_INT.items()}
 from core.sensitivity import get_threshold, set_threshold
 from core.enriched_model import get_enriched_model_status, generate_enriched_model
 from core.schema_router import detect_schema, SCHEMAS
@@ -575,7 +583,7 @@ def render_organisation_view():
 
     if st.session_state.org_module is None:
         st.markdown("### Que voulez-vous analyser aujourd'hui ?")
-        c1, c2 = st.columns(2)
+        c1, c2, c3 = st.columns(3)
         with c1:
             st.markdown(
                 '<div style="background:var(--navy-light,rgba(255,255,255,.04));border:1px solid rgba(0,212,181,.3);'
@@ -604,6 +612,20 @@ def render_organisation_view():
             if st.button("Ouvrir Fraude Transactionnelle →", key="choose_transactions", width="stretch"):
                 st.session_state.org_module = "transactions"
                 st.rerun()
+        with c3:
+            st.markdown(
+                '<div style="background:var(--navy-light,rgba(255,255,255,.04));border:1px solid rgba(139,92,246,.3);'
+                'border-radius:14px;padding:1.4rem;">'
+                '<div style="font-size:2rem;margin-bottom:.4rem;">🏭</div>'
+                '<h4 style="margin:0 0 .4rem 0;">Securite IIoT</h4>'
+                '<p style="color:var(--text-muted,#9fb3d1);font-size:.9rem;">Detecte 7 familles de menaces IIoT '
+                '(recon, DDoS, malware, MITM, brute force...) sur vos flux d\'objets connectes industriels.</p>'
+                '<span style="color:#22c55e;font-size:.82rem;font-weight:600;">✅ Valide sur donnees reelles (F1 macro 0,96)</span>'
+                '</div>', unsafe_allow_html=True,
+            )
+            if st.button("Ouvrir Securite IIoT →", key="choose_iot", width="stretch"):
+                st.session_state.org_module = "iot"
+                st.rerun()
         return
 
     if st.button("← Changer de module", key="back_module"):
@@ -612,8 +634,10 @@ def render_organisation_view():
 
     if st.session_state.org_module == "reseau":
         render_reseau_module()
-    else:
+    elif st.session_state.org_module == "transactions":
         render_transactions_module()
+    else:
+        render_iot_module()
 
 
 def render_reseau_module():
@@ -1342,9 +1366,9 @@ def render_reseau_module():
         st.link_button("Ouvrir le Dashboard Visuel (Reseau) →", "https://kimatey-finnet-guard.vercel.app/dashboard.html?domaine=reseau",
                         type="primary", width="content")
         st.caption(
-            "ℹ️ Ce lien affiche uniquement les donnees Securite Reseau - un lien equivalent existe "
-            "dans le module Fraude Transactionnelle, scope separement. L'Espace Academique n'a pas "
-            "de journal d'alertes, il reste consultable ici uniquement."
+            "ℹ️ Ce lien affiche uniquement les donnees Securite Reseau - des liens equivalents "
+            "existent dans les modules Fraude Transactionnelle et Securite IIoT, scopes separement. "
+            "L'Espace Academique n'a pas de journal d'alertes, il reste consultable ici uniquement."
         )
 
 
@@ -1572,6 +1596,146 @@ def render_academic_view():
 # detail technique range dans des expanders (public technique qui veut
 # creuser). Meme logique que le module reseau, applique a un second produit.
 # ==================================================================
+def render_iot_module():
+    st.markdown("### 🏭 Securite IIoT")
+    st.caption("✅ Modele valide sur un echantillon reel (148 850 lignes) - voir detail technique ci-dessous.")
+
+    st.info(
+        "**En langage simple :** ce module regarde un flux d'objet connecte industriel "
+        "(capteur, camera, passerelle...) et dit s'il ressemble a un comportement normal ou "
+        "a l'une de 7 familles d'attaques connues (reconnaissance, saturation, malware, "
+        "interception, force brute, injection web)."
+    )
+    with st.expander("🔬 Detail technique (pour une equipe technique)"):
+        st.write(
+            "Foret Aleatoire (`class_weight='balanced'`, `n_estimators=100`), retenue apres "
+            "comparaison de 4 algorithmes evalues par validation croisee stratifiee sur F1 macro. "
+            "**F1 macro (test) : 0,956.** Entraine sur un echantillon reel combinant des captures "
+            "d'attaques et de trafic normal d'un jeu de donnees IIoT public. Correction methodologique "
+            "notable : les captures 'benign' duraient systematiquement 1 seconde contre 7 secondes "
+            "pour les attaques dans les donnees source - les variables de type compteur ont ete "
+            "normalisees en taux par seconde avant entrainement pour eliminer ce biais. Volume "
+            "d'entrainement modeste pour certaines classes rares (`bruteforce` : 266 exemples au total) "
+            "- a enrichir avec davantage de donnees avant un usage en production critique."
+        )
+
+    try:
+        iot_service = get_iot_model_service()
+        iot_info = iot_service.info
+        k1, k2 = st.columns(2)
+        k1.markdown(kpi_card("🎯", "F1 macro (test)", f"{iot_info['f1_macro_test']*100:.1f}%", level="good",
+                              sub="Mesure sur donnees reelles jamais vues a l'entrainement"), unsafe_allow_html=True)
+        k2.markdown(kpi_card("🧬", "Familles de menaces detectees", "7", level="neutral",
+                              sub="+ trafic normal (benign)"), unsafe_allow_html=True)
+
+        st.markdown("---")
+        st.subheader("Etat operationnel (IIoT)")
+        iot_org_state = load_org_state(domaine="iot")
+        iot_alert_log = iot_org_state.get("alert_log", [])
+        iot_score = compute_security_score(iot_alert_log)
+        record_score_snapshot(iot_score, domaine="iot")
+        iot_n_open = len([a for a in iot_alert_log if a.get("Statut", "Ouvert") == "Ouvert"])
+        iot_n_closed = len(iot_alert_log) - iot_n_open
+        iot_treated_rate = round(100 * iot_n_closed / len(iot_alert_log)) if iot_alert_log else 0
+        iot_score_level = "good" if iot_score >= 70 else ("warn" if iot_score >= 40 else "threat")
+
+        ik1, ik2, ik3 = st.columns(3)
+        ik1.markdown(kpi_card("🛡️", "Score de securite (IIoT)", f"{iot_score}/100", level=iot_score_level,
+                               sub="Penalise selon volume et gravite des alertes encore ouvertes"), unsafe_allow_html=True)
+        ik2.markdown(kpi_card("🚨", "Alertes IIoT ouvertes", str(iot_n_open),
+                               level=("threat" if iot_n_open > 0 else "good"),
+                               sub=f"{iot_n_closed} deja traitees"), unsafe_allow_html=True)
+        ik3.markdown(kpi_card("✅", "Taux de traitement", f"{iot_treated_rate}%", level="neutral"), unsafe_allow_html=True)
+
+        if iot_alert_log:
+            with st.expander("📋 Journal des alertes IIoT"):
+                for alert in iot_alert_log[:50]:
+                    is_open = alert.get("Statut", "Ouvert") == "Ouvert"
+                    icon = "🔴" if is_open else "🟢"
+                    cols = st.columns([1, 2, 2, 2, 1, 2])
+                    cols[0].markdown(f"{icon} **{alert.get('Statut', 'Ouvert')}**")
+                    cols[1].write(alert["Horodatage"])
+                    cols[2].write(alert["Source"])
+                    cols[3].write(alert["Menace"])
+                    cols[4].write(f"{alert['Confiance (%)']}%")
+                    btn_label = "Marquer traitee" if is_open else "Rouvrir"
+                    if cols[5].button(btn_label, key=f"iot_toggle_{alert['ID']}"):
+                        toggle_alert_status(alert["ID"], domaine="iot")
+                        st.rerun()
+
+        st.link_button("📈 Ouvrir le Dashboard Visuel (IIoT) →",
+                        "https://kimatey-finnet-guard.vercel.app/dashboard.html?domaine=iot")
+        st.caption(
+            "ℹ️ Ce lien affiche uniquement les donnees Securite IIoT, coherent avec le principe "
+            "des produits distincts de l'Espace Organisation."
+        )
+
+        st.markdown("---")
+        st.subheader("Analyser un fichier de flux IIoT (lot)")
+        with st.expander("🔬 Colonnes techniques attendues dans le fichier"):
+            st.write(
+                "Colonnes brutes du schema IIoT (compteurs + `timestamp_start`/`timestamp_end` pour "
+                "que le systeme normalise automatiquement par la duree de capture)."
+            )
+            st.code(", ".join(SCHEMAS["iot"]["features"]))
+
+        uploaded_iot = st.file_uploader("Choisir un fichier CSV de flux IIoT", type=["csv"], key="iot_csv_uploader")
+        if uploaded_iot is not None:
+            df_iot_batch = pd.read_csv(uploaded_iot)
+            st.write(f"**{len(df_iot_batch)} flux charges.**")
+            st.dataframe(df_iot_batch.head(10), width="stretch")
+
+            diagnostic_iot = detect_schema(df_iot_batch.columns)
+            if diagnostic_iot["meilleur_schema"] is None:
+                st.error("⚠️ **Aucun schema connu ne correspond a ce fichier.** Il ne sera pas analyse.")
+                st.stop()
+            elif diagnostic_iot["meilleur_schema"] != "iot":
+                st.error(
+                    f"⚠️ **Ce fichier ressemble davantage au schema '{SCHEMAS[diagnostic_iot['meilleur_schema']]['label']}'** "
+                    "- importez-le plutot dans le module correspondant."
+                )
+                st.stop()
+
+            if st.button("Lancer l'analyse du lot", type="primary", key="iot_batch_analyze"):
+                preds, confs, probas = iot_service.predict(df_iot_batch)
+                df_iot_results = df_iot_batch.copy()
+                df_iot_results["Prediction"] = preds
+                df_iot_results["Confiance (%)"] = confs.round(1)
+
+                n_menaces = int(sum(1 for p in preds if p != "benign"))
+                rate_iot = n_menaces / len(df_iot_batch) * 100 if len(df_iot_batch) > 0 else 0
+
+                entries_to_log = [
+                    {"source": f"Import CSV IIoT - ligne {i+1}", "pred_class": IOT_CLASS_TO_INT.get(p, 0), "confidence": float(confs[i])}
+                    for i, p in enumerate(preds[:500])
+                ]
+                log_alerts_bulk(entries_to_log, domaine="iot", class_names=IOT_INT_TO_LABEL)
+
+                st.session_state.last_iot_batch = {
+                    "n_total": len(df_iot_batch), "n_menaces": n_menaces, "rate": rate_iot,
+                    "df_results": df_iot_results,
+                }
+
+        if "last_iot_batch" in st.session_state:
+            iot_data = st.session_state.last_iot_batch
+            lvl_iot = threat_level(iot_data["rate"])
+            colA, colB, colC = st.columns(3)
+            colA.markdown(kpi_card("📡", "Flux verifies", iot_data["n_total"], level="neutral"), unsafe_allow_html=True)
+            colB.markdown(kpi_card("🚨", "Menaces detectees", iot_data["n_menaces"], level=lvl_iot), unsafe_allow_html=True)
+            colC.markdown(kpi_card("📊", "Part suspecte", f"{iot_data['rate']:.1f}%", level=lvl_iot), unsafe_allow_html=True)
+
+            st.markdown("**Detail des flux (top 200 affiches)**")
+            st.dataframe(iot_data["df_results"].head(200), width="stretch")
+            csv_iot_out = iot_data["df_results"].to_csv(index=False).encode("utf-8")
+            st.download_button("Telecharger les resultats (CSV)", csv_iot_out, "resultats_iot.csv", "text/csv")
+
+    except FileNotFoundError:
+        st.error(
+            "Modele IIoT non trouve. Executez `python src/iot_security/train_pipeline.py` "
+            "pour generer les artefacts."
+        )
+
+
 def render_transactions_module():
     st.markdown("### 💰 Fraude Transactionnelle")
     st.caption("🧪 Module prototype - technologie validee, donnees d'entrainement synthetiques.")

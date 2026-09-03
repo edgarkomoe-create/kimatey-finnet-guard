@@ -130,7 +130,7 @@ def comparer_algorithmes(X_train, y_train, strategie: str, cv=5):
 GRILLES_HYPERPARAMETRES = {
     "Regression_Logistique": {"estimator": LogisticRegression, "grid": {"C": [0.1, 1.0, 10.0]}},
     "Arbre_Decision": {"estimator": DecisionTreeClassifier, "grid": {"max_depth": [5, 10, 15, None]}},
-    "Foret_Aleatoire": {"estimator": RandomForestClassifier, "grid": {"n_estimators": [100, 200], "max_depth": [10, 20, None]}},
+    "Foret_Aleatoire": {"estimator": RandomForestClassifier, "grid": {"n_estimators": [100], "max_depth": [15, None]}},
     "Gradient_Boosting": {"estimator": HistGradientBoostingClassifier, "grid": {"max_depth": [None, 10, 20], "learning_rate": [0.05, 0.1, 0.2]}},
 }
 

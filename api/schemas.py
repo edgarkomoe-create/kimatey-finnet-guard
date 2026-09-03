@@ -193,6 +193,29 @@ class TransactionBatchSummary(BaseModel):
     avertissement: str = "Modele prototype entraine sur des donnees SYNTHETIQUES - non valide sur de vraies transactions."
 
 
+class IotPredictionResponse(BaseModel):
+    classe_predite: str
+    libelle: str
+    confiance_pct: float
+    est_menace: bool
+    avertissement: str = (
+        "Modele entraine sur un echantillon reel (148 850 lignes) d'un jeu de donnees IIoT "
+        "public - F1 macro 0.956 sur jeu de test. Volume d'entrainement modeste pour certaines "
+        "classes rares (ex. 'bruteforce', 266 exemples au total) - a valider sur davantage de "
+        "donnees avant un usage en production critique."
+    )
+
+
+class IotBatchSummary(BaseModel):
+    n_total: int
+    n_menaces: int
+    taux_menace: float
+    avertissement: str = (
+        "Modele entraine sur un echantillon reel - voir /model_info_iot pour le detail "
+        "methodologique complet (normalisation par duree de capture, strategie de desequilibre)."
+    )
+
+
 # ---------------------------------------------------------------- Systeme de Pass (MODE DEMO, pas de vrai paiement)
 class PassInfo(BaseModel):
     id: str
