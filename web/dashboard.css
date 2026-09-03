@@ -47,6 +47,9 @@
 }
 .domain-toggle-btn.active { background: rgba(0,212,181,0.18); color: var(--teal); font-weight: 700; border: 1px solid var(--teal); }
 
+.refresh-row { display: flex; align-items: center; gap: .6rem; }
+.last-updated-text { font-size: .74rem; color: var(--text-muted); }
+
 /* ---- Vue simple ---- */
 .simple-banner {
   padding: 1.4rem 1.6rem; border-radius: 12px; border-left: 5px solid var(--teal);

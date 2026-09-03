@@ -95,6 +95,7 @@ async function authRequest(mode, email, password) {
     if (!r.ok) { errorEl.textContent = body.detail || "Une erreur est survenue."; return; }
     setSession(body.token, email);
     showDashboard();
+    demarrerAutoRefresh();
   } catch (e) {
     errorEl.textContent = "Impossible de contacter le serveur (" + API_BASE_URL + ").";
   }
@@ -174,9 +175,17 @@ async function loadDashboardData() {
     const data = await r.json();
     renderSimpleView(data);
     renderTechnicalView(data);
+    updateLastRefreshedLabel();
   } catch (e) {
     document.getElementById("simple-banner").textContent = "Impossible de charger le dashboard (" + API_BASE_URL + ").";
   }
+}
+
+function updateLastRefreshedLabel() {
+  const el = document.getElementById("last-updated");
+  if (!el) return;
+  const maintenant = new Date();
+  el.textContent = "Mis a jour a " + maintenant.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
 function renderSimpleView(data) {
@@ -402,8 +411,40 @@ document.getElementById("btn-comment-analyst").addEventListener("click", (e) => 
 });
 
 // ==========================================================================
+// Rafraichissement : bouton manuel + auto-refresh periodique (60s). Se met
+// en pause quand l'onglet n'est pas visible (economise des appels API
+// inutiles), reprend au retour sur l'onglet.
+// ==========================================================================
+document.getElementById("btn-refresh").addEventListener("click", () => {
+  if (getToken()) loadDashboardData();
+});
+
+let autoRefreshInterval = null;
+
+function demarrerAutoRefresh() {
+  if (autoRefreshInterval) return;
+  autoRefreshInterval = setInterval(() => {
+    if (getToken() && document.visibilityState === "visible") loadDashboardData();
+  }, 60000); // 60 secondes
+}
+
+function arreterAutoRefresh() {
+  if (autoRefreshInterval) {
+    clearInterval(autoRefreshInterval);
+    autoRefreshInterval = null;
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && getToken()) {
+    loadDashboardData(); // rafraichit immediatement au retour sur l'onglet
+  }
+});
+
+// ==========================================================================
 // Demarrage
 // ==========================================================================
 if (getToken()) {
   showDashboard();
+  demarrerAutoRefresh();
 }
