@@ -314,6 +314,18 @@ def preprocess_raw_df(df_raw):
     return df_scaled[SELECTED_FEATURES]
 
 
+def check_schema_compatibility(df_raw):
+    """Verifie qu'un fichier importe contient reellement au moins une partie des
+    variables attendues, AVANT tout traitement - pour ne jamais laisser
+    preprocess_raw_df imputer silencieusement 100% des colonnes manquantes (ce
+    qui produirait un resultat uniforme et denue de sens, sans que l'utilisateur
+    en soit informe). Retourne (colonnes_trouvees, colonnes_manquantes, taux_couverture)."""
+    colonnes_trouvees = [c for c in FEATURES if c in df_raw.columns]
+    colonnes_manquantes = [c for c in FEATURES if c not in df_raw.columns]
+    taux_couverture = len(colonnes_trouvees) / len(FEATURES)
+    return colonnes_trouvees, colonnes_manquantes, taux_couverture
+
+
 def predict_with_confidence(df_raw):
     X = preprocess_raw_df(df_raw)
     preds = BEST_MODEL.predict(X)
@@ -832,6 +844,33 @@ def render_reseau_module():
         if df_logs is not None:
             st.write(f"**{len(df_logs)} connexions chargees.**")
             st.dataframe(df_logs.head(10), use_container_width=True)
+
+            # ---- Verification de compatibilite de schema AVANT tout traitement -----
+            # Sans ce controle, un fichier dont aucune colonne ne correspond aux 9
+            # variables attendues serait quand meme "analyse" : toutes les valeurs
+            # manquantes seraient silencieusement remplacees par la mediane du jeu
+            # d'entrainement, produisant un resultat uniforme (souvent "0 menace
+            # detectee") qui n'a jamais reellement examine les donnees importees.
+            colonnes_trouvees, colonnes_manquantes, taux_couverture = check_schema_compatibility(df_logs)
+            if taux_couverture == 0:
+                st.error(
+                    "⚠️ **Aucune des 9 colonnes attendues par le modele n'a ete trouvee dans ce fichier.** "
+                    "Ce systeme est specialise sur un format precis de flux reseau (voir la liste "
+                    "ci-dessous) - il ne peut pas analyser un jeu de donnees avec un schema different "
+                    "(ex. logs d'appareils IoT, journaux d'evenements, etc.), meme si ce fichier "
+                    "contient de vraies attaques etiquetees. Poursuivre l'analyse produirait un "
+                    "resultat denue de sens (toutes les lignes traitees de facon identique)."
+                )
+                with st.expander("Colonnes attendues par ce modele"):
+                    st.code(", ".join(FEATURES))
+                st.stop()
+            elif taux_couverture < 0.5:
+                st.warning(
+                    f"⚠️ Seulement {len(colonnes_trouvees)}/{len(FEATURES)} colonnes attendues trouvees "
+                    f"dans ce fichier - colonnes manquantes : {', '.join(colonnes_manquantes)}. "
+                    "Les colonnes manquantes seront remplacees par une valeur mediane par defaut, ce "
+                    "qui degrade fortement la fiabilite du resultat. A n'utiliser qu'a titre indicatif."
+                )
 
             enrichment = detect_enrichment_columns(df_logs)
             if enrichment:
