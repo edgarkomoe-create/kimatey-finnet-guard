@@ -13,6 +13,7 @@ warnings.filterwarnings("ignore")
 import joblib
 import numpy as np
 import pandas as pd
+import sklearn
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
@@ -127,6 +128,7 @@ def main():
     joblib.dump(best_model_obj, OUT_DIR / "models" / "best_model.joblib")
     with open(OUT_DIR / "best_model_info.json", "w") as f:
         json.dump({
+            "sklearn_version": sklearn.__version__,
             "name": best_row["Modele"],
             "accuracy": float(best_row["Exactitude"]),
             "f1_macro": float(best_row["F1-score (macro)"]),

@@ -17,6 +17,8 @@ from functools import lru_cache
 import joblib
 import pandas as pd
 
+from core.model_version_check import check_sklearn_version
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 OUT_DIR = BASE_DIR / "outputs" / "transaction_fraud"
 MODEL_DIR = OUT_DIR / "models"
@@ -32,6 +34,7 @@ class TransactionModelService:
         self.model = joblib.load(MODEL_DIR / "best_model_transactions.joblib")
         with open(OUT_DIR / "best_model_info_transactions.json") as f:
             self.info = json.load(f)
+        check_sklearn_version(self.info, "Modele fraude transactionnelle")
 
     def preprocess(self, df_raw: pd.DataFrame) -> pd.DataFrame:
         df = df_raw.copy()

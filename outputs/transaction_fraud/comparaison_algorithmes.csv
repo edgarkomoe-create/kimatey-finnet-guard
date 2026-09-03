@@ -1,4 +1,5 @@
-Modele,Exactitude,F1_Score,AUC
-Foret_Aleatoire,0.9456,0.8018,0.8468
-Regression_Logistique,0.9431,0.7908,0.8556
-Arbre_Decision,0.9425,0.789,0.8256
+Modele,AUC_PR_CV_moyenne,AUC_PR_CV_ecart_type,Exactitude,F1_Score,AUC
+Gradient_Boosting,0.6999,0.0356,0.9627,0.7128,0.8113
+Regression_Logistique,0.697,0.0336,0.915,0.5216,0.791
+Foret_Aleatoire,0.6968,0.0358,0.9687,0.7459,0.8162
+Arbre_Decision,0.4191,0.0176,0.9387,0.6034,0.7885

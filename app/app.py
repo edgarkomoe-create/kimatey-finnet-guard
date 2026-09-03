@@ -468,7 +468,7 @@ def render_landing():
             unsafe_allow_html=True,
         )
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Entrer dans l'Espace Organisation →", type="primary", use_container_width=True, key="landing_org"):
+        if st.button("Entrer dans l'Espace Organisation →", type="primary", width="stretch", key="landing_org"):
             st.session_state.view = "organisation"
             st.rerun()
     with col2:
@@ -484,7 +484,7 @@ def render_landing():
         # d'image, fil de tendances, Pass, reconnaissance vocale). Redirection plutot
         # que de maintenir deux versions divergentes de la meme experience.
         st.link_button("Entrer dans l'Espace Grand Public →", "https://kimatey-finnet-guard.vercel.app/public.html",
-                        type="primary", use_container_width=True)
+                        type="primary", width="stretch")
     with col3:
         st.markdown(
             '<div class="landing-card"><h3>🎓 Espace Academique</h3>'
@@ -494,7 +494,7 @@ def render_landing():
             unsafe_allow_html=True,
         )
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Entrer dans l'Espace Academique →", type="primary", use_container_width=True, key="landing_academic"):
+        if st.button("Entrer dans l'Espace Academique →", type="primary", width="stretch", key="landing_academic"):
             st.session_state.view = "academic"
             st.rerun()
 
@@ -516,7 +516,7 @@ def render_organisation_login_gate():
         with st.form("form_login_org"):
             email = st.text_input("Email", key="login_email")
             password = st.text_input("Mot de passe", type="password", key="login_password")
-            submitted = st.form_submit_button("Se connecter", type="primary", use_container_width=True)
+            submitted = st.form_submit_button("Se connecter", type="primary", width="stretch")
         if submitted:
             if not email or not password:
                 st.error("Email et mot de passe requis.")
@@ -532,7 +532,7 @@ def render_organisation_login_gate():
         with st.form("form_register_org"):
             new_email = st.text_input("Email", key="register_email")
             new_password = st.text_input("Mot de passe (6 caracteres min.)", type="password", key="register_password")
-            submitted_r = st.form_submit_button("Creer mon compte", type="primary", use_container_width=True)
+            submitted_r = st.form_submit_button("Creer mon compte", type="primary", width="stretch")
         if submitted_r:
             if not new_email or "@" not in new_email or "." not in new_email.split("@")[-1]:
                 st.error("Adresse email invalide.")
@@ -598,7 +598,7 @@ def render_organisation_view():
                 '<span style="color:#22c55e;font-size:.82rem;font-weight:600;">✅ Technologie validee (99% exactitude)</span>'
                 '</div>', unsafe_allow_html=True,
             )
-            if st.button("Ouvrir Securite Reseau →", key="choose_reseau", type="primary", use_container_width=True):
+            if st.button("Ouvrir Securite Reseau →", key="choose_reseau", type="primary", width="stretch"):
                 st.session_state.org_module = "reseau"
                 st.rerun()
         with c2:
@@ -612,7 +612,7 @@ def render_organisation_view():
                 '<span style="color:#f5a524;font-size:.82rem;font-weight:600;">🧪 Prototype (donnees synthetiques)</span>'
                 '</div>', unsafe_allow_html=True,
             )
-            if st.button("Ouvrir Fraude Transactionnelle →", key="choose_transactions", use_container_width=True):
+            if st.button("Ouvrir Fraude Transactionnelle →", key="choose_transactions", width="stretch"):
                 st.session_state.org_module = "transactions"
                 st.rerun()
         return
@@ -843,7 +843,7 @@ def render_reseau_module():
 
         if df_logs is not None:
             st.write(f"**{len(df_logs)} connexions chargees.**")
-            st.dataframe(df_logs.head(10), use_container_width=True)
+            st.dataframe(df_logs.head(10), width="stretch")
 
             # ---- Verification de compatibilite de schema AVANT tout traitement -----
             # Sans ce controle, un fichier dont aucune colonne ne correspond aux 9
@@ -949,7 +949,7 @@ def render_reseau_module():
             )])
             fig.update_yaxes(title="Nombre de flux")
             plotly_dark_layout(fig, height=320)
-            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
             # ---- Vues adaptatives : uniquement si les colonnes correspondantes ont ete detectees ----
             enrichment = data.get("enrichment", {})
@@ -970,7 +970,7 @@ def render_reseau_module():
                         fig.update_yaxes(title="Menaces detectees")
                         fig.update_xaxes(type="category")  # meme correctif que la chronologie multi-gravite
                         plotly_dark_layout(fig, height=320)
-                        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+                        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
                     except (ValueError, TypeError):
                         st.info("Colonne d'horodatage detectee mais format illisible - chronologie indisponible.")
                 else:
@@ -988,7 +988,7 @@ def render_reseau_module():
                     )])
                     fig.update_xaxes(title="Menaces detectees")
                     plotly_dark_layout(fig, height=320)
-                    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+                    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
                 elif "ip" in enrichment:
                     st.info(
                         "Une colonne IP source est presente, mais la resolution geographique par IP "
@@ -1002,7 +1002,7 @@ def render_reseau_module():
                     )
 
             st.markdown("**Detail des flux (top 200 affiches)**")
-            st.dataframe(df_results.head(200), use_container_width=True)
+            st.dataframe(df_results.head(200), width="stretch")
 
             csv_out = df_results.to_csv(index=False).encode("utf-8")
             st.download_button("Telecharger les resultats (CSV)", csv_out, "resultats_analyse.csv", "text/csv")
@@ -1070,7 +1070,7 @@ def render_reseau_module():
             )])
             fig.update_xaxes(title="Probabilite (%)")
             plotly_dark_layout(fig, height=280)
-            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
             if pred_class != 0:
                 st.warning("⚠️ Menace detectee - alerte ajoutee au journal.")
@@ -1095,8 +1095,8 @@ def render_reseau_module():
         c1, c2, c3, c4 = st.columns([2, 2, 1, 1])
         n_flux = c1.slider("Nombre de flux a simuler", min_value=5, max_value=100, value=25, step=5)
         vitesse = c2.slider("Intervalle entre flux (s)", min_value=0.1, max_value=1.5, value=0.4, step=0.1)
-        lancer = c3.button("▶ Demarrer", type="primary", use_container_width=True)
-        reinit = c4.button("↺ Reinitialiser", use_container_width=True)
+        lancer = c3.button("▶ Demarrer", type="primary", width="stretch")
+        reinit = c4.button("↺ Reinitialiser", width="stretch")
 
         if reinit:
             st.session_state.live_dist = {}
@@ -1129,13 +1129,13 @@ def render_reseau_module():
             fig = go.Figure(data=[go.Bar(x=labels, y=values, marker_color=[CLASS_COLORS[c] for c in CLASSES])])
             fig.update_yaxes(title="Flux cumules")
             plotly_dark_layout(fig, height=300)
-            chart_ph.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False},
+            chart_ph.plotly_chart(fig, width="stretch", config={"displayModeBar": False},
                                    key=f"live_chart_{st.session_state.live_stats['n']}")
 
         def render_table():
             rows = st.session_state.live_rows
             if rows:
-                table_ph.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True, height=360)
+                table_ph.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True, height=360)
             else:
                 table_ph.info("En attente du demarrage de la simulation...")
 
@@ -1229,7 +1229,7 @@ def render_reseau_module():
                 )])
                 fig.update_yaxes(title="Nombre d'alertes ouvertes")
                 plotly_dark_layout(fig, height=320)
-                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
             else:
                 st.info("Aucune alerte ouverte actuellement.")
         with c2:
@@ -1244,7 +1244,7 @@ def render_reseau_module():
                 fig.update_yaxes(title="Score /100", range=[0, 100])
                 fig.update_xaxes(title="Chargements successifs de cet onglet")
                 plotly_dark_layout(fig, height=320)
-                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
             else:
                 st.info("L'historique du score se construit au fil des visites de cet onglet.")
 
@@ -1293,7 +1293,7 @@ def render_reseau_module():
                 # graphique illisible. En categoriel, chaque jour est un point discret, fiable.
                 fig.update_xaxes(type="category")
                 plotly_dark_layout(fig, height=380)
-                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
         else:
             st.info("Aucune alerte enregistree pour l'instant.")
 
@@ -1339,7 +1339,7 @@ def render_reseau_module():
             "presentation plus riche. Connectez-vous avec le meme compte."
         )
         st.link_button("Ouvrir le Dashboard Visuel (Reseau) →", "https://kimatey-finnet-guard.vercel.app/dashboard.html?domaine=reseau",
-                        type="primary", use_container_width=False)
+                        type="primary", width="content")
         st.caption(
             "ℹ️ Ce lien affiche uniquement les donnees Securite Reseau - un lien equivalent existe "
             "dans le module Fraude Transactionnelle, scope separement. L'Espace Academique n'a pas "
@@ -1402,7 +1402,7 @@ def render_academic_view():
                      'La technique retenue en production est l\'Arbre de Decision.</p>', unsafe_allow_html=True)
         if (OUT_DIR / "optimized_results.csv").exists():
             df_opt = pd.read_csv(OUT_DIR / "optimized_results.csv")
-            st.dataframe(df_opt, use_container_width=True, hide_index=True)
+            st.dataframe(df_opt, width="stretch", hide_index=True)
             fig = go.Figure(data=[go.Bar(
                 x=df_opt["Modele"].str.replace("_optimise", ""), y=df_opt["Exactitude"],
                 marker_color=TEAL, text=(df_opt["Exactitude"] * 100).round(2).astype(str) + "%",
@@ -1410,7 +1410,7 @@ def render_academic_view():
             )])
             fig.update_yaxes(title="Exactitude", range=[0.9, 1.0])
             plotly_dark_layout(fig, height=340)
-            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
             with st.expander("📖 Pourquoi comparer 5 algorithmes plutot que d'en choisir un directement ?"):
                 st.markdown(
                     "Chaque famille d'algorithme a des forces differentes : la Regression Logistique est "
@@ -1442,7 +1442,7 @@ def render_academic_view():
     st.markdown('<p class="chart-hint">En ne gardant que 5 signaux cles sur les 9 collectes, le systeme reste '
                  'aussi fiable, tout en etant plus simple a auditer pour un analyste.</p>', unsafe_allow_html=True)
     if (OUT_DIR / "comparison_step3.csv").exists():
-        st.dataframe(pd.read_csv(OUT_DIR / "comparison_step3.csv"), use_container_width=True, hide_index=True)
+        st.dataframe(pd.read_csv(OUT_DIR / "comparison_step3.csv"), width="stretch", hide_index=True)
 
     st.markdown("---")
     st.subheader("🎓 Professeur Cyber - assistant pedagogique")
@@ -1547,7 +1547,7 @@ def render_academic_view():
         if uploaded_case_study is not None:
             df_case = pd.read_csv(uploaded_case_study)
             st.write(f"**{len(df_case)} lignes, {len(df_case.columns)} colonnes.**")
-            st.dataframe(df_case.head(10), use_container_width=True)
+            st.dataframe(df_case.head(10), width="stretch")
             numeric_cols = df_case.select_dtypes(include=[np.number]).columns.tolist()
             if numeric_cols:
                 col_choisie = st.selectbox("Colonne numerique a explorer", numeric_cols, key="case_study_col")
@@ -1560,7 +1560,7 @@ def render_academic_view():
                 fig.update_xaxes(title=col_choisie)
                 fig.update_yaxes(title="Frequence")
                 plotly_dark_layout(fig, height=340)
-                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
             else:
                 st.info("Aucune colonne numerique detectee dans ce fichier.")
 
@@ -1660,7 +1660,7 @@ def render_transactions_module():
         if uploaded_tx is not None:
             df_tx_batch = pd.read_csv(uploaded_tx)
             st.write(f"**{len(df_tx_batch)} transactions chargees.**")
-            st.dataframe(df_tx_batch.head(10), use_container_width=True)
+            st.dataframe(df_tx_batch.head(10), width="stretch")
 
             if st.button("Lancer l'analyse du lot", type="primary", key="tx_batch_analyze"):
                 preds, confs, probas = tx_service.predict(df_tx_batch)
@@ -1692,7 +1692,7 @@ def render_transactions_module():
             colC.markdown(kpi_card("📊", "Part suspecte", f"{tx_data['rate']:.1f}%", level=lvl_tx), unsafe_allow_html=True)
 
             st.markdown("**Detail des transactions (top 200 affiches)**")
-            st.dataframe(tx_data["df_results"].head(200), use_container_width=True)
+            st.dataframe(tx_data["df_results"].head(200), width="stretch")
             csv_tx_out = tx_data["df_results"].to_csv(index=False).encode("utf-8")
             st.download_button("Telecharger les resultats (CSV)", csv_tx_out, "resultats_transactions.csv", "text/csv")
             st.caption("⚠️ Rappel : evaluation par un modele prototype sur donnees synthetiques - "
@@ -1925,7 +1925,7 @@ def render_public_view():
 
         if st.session_state.game_hearts <= 0:
             st.warning("🛡️ Plus de vies pour l'instant sur cette session.")
-            if st.button("🔁 Recharger mes vies", use_container_width=True):
+            if st.button("🔁 Recharger mes vies", width="stretch"):
                 st.session_state.game_hearts = MAX_HEARTS
                 st.rerun()
         else:
@@ -1934,8 +1934,8 @@ def render_public_view():
 
             colq1, colq2 = st.columns([1, 1])
             valider = colq1.button("Valider ma reponse", type="primary", disabled=choice is None,
-                                    use_container_width=True)
-            suivant = colq2.button("Scenario suivant ➡️", use_container_width=True)
+                                    width="stretch")
+            suivant = colq2.button("Scenario suivant ➡️", width="stretch")
 
             if valider:
                 if scenario["choices"].index(choice) == scenario["correct"]:
@@ -2033,7 +2033,7 @@ def render_public_view():
                 st.write(current["question"])
             cols = st.columns(len(current["options"]))
             for i, opt in enumerate(current["options"]):
-                if cols[i].button(opt, key=f"report_opt_{st.session_state.report_step}_{i}", use_container_width=True):
+                if cols[i].button(opt, key=f"report_opt_{st.session_state.report_step}_{i}", width="stretch"):
                     st.session_state.report_answers[current["key"]] = opt
                     st.session_state.report_step += 1
                     st.rerun()
@@ -2050,8 +2050,8 @@ def render_public_view():
             if hasattr(st, "audio_input"):
                 audio_report = st.audio_input("🎙️ Ou racontez a l'oral (facultatif)")
             colf1, colf2 = st.columns(2)
-            envoyer = colf1.button("Envoyer ma contribution 🎉", type="primary", use_container_width=True)
-            passer = colf2.button("Terminer sans detail", use_container_width=True)
+            envoyer = colf1.button("Envoyer ma contribution 🎉", type="primary", width="stretch")
+            passer = colf2.button("Terminer sans detail", width="stretch")
 
             if envoyer or passer:
                 canal = st.session_state.report_answers.get("canal", "non precise")
@@ -2100,7 +2100,7 @@ def render_public_view():
                     "Stockage local a cette session de demonstration uniquement - pas encore relie a une base "
                     "de donnees persistante ni a un pipeline de reentrainement du modele."
                 )
-                st.dataframe(pd.DataFrame(st.session_state.community_reports), use_container_width=True, hide_index=True)
+                st.dataframe(pd.DataFrame(st.session_state.community_reports), width="stretch", hide_index=True)
 
 
 # ==================================================================
@@ -2118,7 +2118,7 @@ elif st.session_state.view == "public":
     st.markdown('<p class="landing-title">Cet espace a demenage</p>', unsafe_allow_html=True)
     st.write("L'Espace Grand Public est desormais disponible sur notre page web dediee, plus complete.")
     st.link_button("Ouvrir l'Espace Grand Public →", "https://kimatey-finnet-guard.vercel.app/public.html",
-                    type="primary", use_container_width=True)
+                    type="primary", width="stretch")
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("← Retour a l'accueil"):
         st.session_state.view = "landing"

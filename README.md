@@ -23,6 +23,35 @@ citoyens contre les arnaques mobile money.
 **Persistance** : comptes utilisateurs et journal d'alertes sur PostgreSQL (Neon), avec repli
 automatique sur fichiers JSON si aucune base n'est configurée (voir section dédiée ci-dessous).
 
+## Calibration du générateur de données synthétiques (Fraude Transactionnelle) sur des statistiques réelles BCEAO
+
+Le module Fraude Transactionnelle reste un prototype entraîné sur des données **100% synthétiques**
+(aucune vraie transaction, aucune fraude réelle constatée) - ce statut ne change pas tant qu'un
+partenariat avec un opérateur mobile money réel n'aura pas fourni de données anonymisées.
+
+Ce qui a changé : `src/transaction_fraud/generate_synthetic_data.py` (v3) calibre désormais les
+**montants** et la **typologie de fraude** sur des statistiques publiques réelles de la BCEAO
+(Banque Centrale des États de l'Afrique de l'Ouest), plutôt que sur des valeurs choisies sans
+référence :
+
+- **Montant moyen des transactions légitimes** : centré sur ~20 000 FCFA, ancré sur le montant
+  moyen réel d'un transfert de personne à personne en zone UEMOA/Côte d'Ivoire (18 220-22 692 FCFA
+  selon le [Rapport annuel BCEAO sur les services financiers numériques dans l'UEMOA - 2024](https://www.bceao.int/sites/default/files/2026-03/Rapport%20annuel%20sur%20les%20services%20financiers%20num%C3%A9riques%20dans%20l'UEMOA%20-%202024.pdf))
+- **Sous-type de fraude "bypass cash in"** (remplace l'ancien "structuring" générique) : calibré
+  sur un pattern de fraude réellement documenté par la BCEAO - le fractionnement des dépôts
+  clients par des distributeurs/agents en plusieurs petites transactions successives, pour
+  toucher davantage de commissions (barèmes dégressifs par palier). Voir le
+  [Rapport annuel BCEAO 2021](https://www.bceao.int/sites/default/files/2023-02/Rapport%20annuel%20sur%20les%20services%20financiers%20num%C3%A9riques%20dans%20l'UEMOA%20%C3%A0%20fin%202021.pdf),
+  qui documente ce pattern (Graphique n°5 : Fraudes, incidents et gestion des réclamations
+  clients).
+
+**Ce qui reste une hypothèse non vérifiée**, honnêtement signalé : le **taux de fraude** (5% par
+défaut) et les deux autres sous-types (compte compromis, vélocité/mules) n'ont pas pu être ancrés
+sur des chiffres BCEAO publiquement disponibles - les rapports annuels mentionnent la fraude
+comme risque croissant mais publient les statistiques chiffrées sous forme de graphique (image
+dans le PDF), non extractibles automatiquement. Cette calibration améliore le réalisme des
+*montants* et de la *typologie*, pas la validité du *taux de fraude* lui-même.
+
 ## Structure du projet
 
 ```
@@ -402,6 +431,28 @@ Modèle optimal retenu : **Arbre de Décision élagué et optimisé** (5 variabl
 - F1-score macro : 98,72 %
 - AUC macro : 99,92 %
 
+## Garde-fou de version scikit-learn
+
+`requirements.txt` épingle `scikit-learn` à une version exacte (`==`), contrairement au reste des
+dépendances (`>=`) : les objets scikit-learn sérialisés via joblib/pickle ne sont pas garantis
+stables entre versions mineures - un écart peut se charger sans erreur mais produire des
+prédictions subtilement différentes de celles validées à l'entraînement. Chaque pipeline
+d'entraînement (`src/grid_search.py`, `src/transaction_fraud/train_pipeline.py`) enregistre
+désormais la version scikit-learn utilisée dans les métadonnées du modèle
+(`sklearn_version` dans `best_model_info*.json`) ; `core/model_version_check.py` la compare à la
+version installée à chaque démarrage de service (`api/model_service.py`,
+`api/transaction_model_service.py`) et journalise un avertissement clair (sans bloquer le
+démarrage) en cas d'écart - utile en particulier si l'environnement de déploiement (Render,
+Streamlit Cloud) réinstalle une version différente de celle utilisée localement.
+
+## Migration du paramètre Streamlit `width`
+
+Les 36 usages de `use_container_width=True/False` dans `app/app.py` ont été remplacés par
+`width="stretch"`/`width="content"` : `use_container_width` est déprécié par Streamlit depuis fin
+2025 (date de retrait déjà passée au moment de cette migration) - découvert via un warning émis
+pendant l'exécution des tests Streamlit de l'Espace Académique, corrigé avant que Streamlit Cloud
+ne mette à jour vers une version où l'ancien paramètre ne fonctionnerait plus du tout.
+
 ## Exécuter la suite de tests
 
 ```bash
@@ -410,15 +461,47 @@ cd kimatey_finnet_guard
 python3 -m pytest tests/ -v
 ```
 
-111 tests (pipeline ML réseau, API - Organisation historique, Grand Public, jeu de vigilance gamifié,
+109 tests (pipeline ML réseau, API - Organisation historique, Grand Public, jeu de vigilance gamifié,
 assistance à l'analyse Lieutenant Cyber, 5 modes d'authentification dont l'auto-inscription self_signup,
-application Streamlit dont l'écran de connexion/création de compte) s'exécutent en moins de 25 secondes.
+application Streamlit dont l'écran de connexion/création de compte, écran de sélection de module de
+l'Espace Organisation et de l'Espace Académique, redirection de l'Espace Grand Public vers la version
+web, Mini-quiz ML, module Fraude Transactionnelle) + 33 tests de persistance PostgreSQL/JSON + 8 tests
+API de fraude transactionnelle + 11 tests structurels du dashboard SOC web = **175 tests, 1 skip
+attendu**, s'exécutent en moins de 30 secondes au total.
 
-**⚠️ Couverture incomplète, honnêtement signalée** : cette suite ne couvre pas encore le module Fraude
-Transactionnelle, la persistance PostgreSQL (`core/db.py`, `core/alert_log.py`), l'Espace Académique,
-ni le dashboard SOC web (`web/dashboard.html`) - fonctionnalités ajoutées après la suite de tests
-initiale, validées manuellement mais sans tests automatisés dédiés à ce jour. À ajouter avant tout
-usage en production.
+`tests/test_streamlit_app.py` a été resynchronisé avec deux restructurations de l'interface qui
+l'avaient rendu obsolète sans mise à jour immédiate (19 tests étaient en échec avant correction,
+voir le journal Git pour le détail) : l'entrée dans l'Espace Organisation passe désormais par un
+écran de choix entre 2 produits avant les onglets techniques (7 onglets pour le module réseau,
+au lieu de 5), et l'Espace Grand Public Streamlit est déprécié - la carte d'accueil pointe
+désormais vers la version web indépendante (Vercel) via un lien externe plutôt qu'un onglet interne.
+
+**Les 3 trous de couverture précédemment signalés sont désormais comblés :**
+
+- **Module Fraude Transactionnelle** : navigation Streamlit (`TestModuleFraudeTransactionnelle`
+  dans `test_streamlit_app.py`) + endpoints API (`tests/test_api_transactions.py`, 8 tests -
+  prédiction unique, lot CSV, validation des bornes, isolation du journal d'alertes par domaine)
+- **Espace Académique** : `TestEspaceAcademique` + `TestMiniQuizAcademique` dans
+  `test_streamlit_app.py` - accès sans authentification, KPIs du modèle, les 3 modes (Q&A,
+  quiz, EDA), logique de score du quiz (bonne/mauvaise réponse)
+- **Dashboard SOC web** (`web/dashboard.html`) : `tests/test_dashboard_web.py` (11 tests) -
+  analyse statique sans navigateur (validité syntaxique JS via `node --check`, équilibre des
+  balises HTML/accolades CSS, cohérence des IDs référencés par `getElementById()` vs définis
+  dans le HTML ou injectés dynamiquement, correspondance canvases Chart.js ↔ graphiques
+  instanciés, absence d'URL d'API codée en dur hors de `config.js`). Une couverture
+  fonctionnelle complète (clics, rendu visuel réel) resterait hors de portée de pytest et
+  nécessiterait un outil navigateur (ex. Playwright) - non implémenté ici.
+
+Le jeu de vigilance gamifié et l'assistant Lieutenant Cyber conversationnel, désormais implémentés
+en HTML/JS pur sur la version web (Vercel) plutôt qu'en Streamlit, restent hors de portée de cette
+suite pytest/AppTest pour la même raison (nécessiteraient Playwright).
+
+**Persistance PostgreSQL (`core/db.py`, `core/alert_log.py`)** : couverte par
+`tests/test_persistence_postgresql.py` (33 tests) - connexion mockée (aucune base réelle requise
+pour l'essentiel de la suite), isolation stricte entre domaines réseau/transactions, repli JSON,
+et toute la logique métier pure (score de sécurité, MTTR, tendance, répartition de gravité). Un
+test d'intégration optionnel contre une vraie base existe (`TestIntegrationReelleOptionnelle`,
+ignoré par défaut, activable via `TEST_DATABASE_URL`).
 
 Le détail de la stratégie de test et des résultats se trouve dans
 `report/Rapport_de_Tests.docx`.
