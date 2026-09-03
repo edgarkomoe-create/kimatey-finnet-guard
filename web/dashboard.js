@@ -9,6 +9,81 @@ let statusChart = null;
 let currentDomain = "reseau"; // 'reseau' ou 'transactions'
 let currentDashboardData = null; // derniere reponse API, pour filtrage de date cote client
 
+// ==========================================================================
+// Donnees reelles du pipeline pour chaque domaine (issues des artefacts
+// d'entrainement - outputs/best_model_info*.json) - pas de valeurs inventees.
+// ==========================================================================
+const PIPELINE_DATA = {
+  reseau: {
+    sousTitre: "Arbre de Decision optimise - entraine sur 50 000 flux reseau reels",
+    etapes: [
+      { titre: "Donnees", valeur: "50 000", sous: "flux reseau reels" },
+      { titre: "Pretraitement", valeur: "9 → 5", sous: "variables (RFE + IQR)" },
+      { titre: "Comparaison", valeur: "5 algos", sous: "validation croisee 5 plis" },
+      { titre: "Modele retenu", valeur: "Arbre de Decision", sous: "GridSearchCV" },
+      { titre: "Evaluation", valeur: "F1 98.72%", sous: "Accuracy 99.04% / AUC 99.92%" },
+    ],
+  },
+  transactions: {
+    sousTitre: "Gradient Boosting - entraine sur 8 000 transactions synthetiques calibrees BCEAO",
+    etapes: [
+      { titre: "Donnees", valeur: "8 000", sous: "transactions synthetiques" },
+      { titre: "Pretraitement", valeur: "8 var.", sous: "standardisation train-only" },
+      { titre: "Comparaison", valeur: "4 algos", sous: "AUC-PR (classes desequilibrees)" },
+      { titre: "Modele retenu", valeur: "Gradient Boosting", sous: "GridSearchCV" },
+      { titre: "Evaluation", valeur: "F1 72.63%", sous: "AUC 81.94% / Accuracy 96.53%" },
+    ],
+  },
+  iot: {
+    sousTitre: "Foret Aleatoire - entraine sur 148 850 flux IIoT reels (attaques + benin)",
+    etapes: [
+      { titre: "Donnees", valeur: "148 850", sous: "flux IIoT reels" },
+      { titre: "Pretraitement", valeur: "71 → 30", sous: "variables (VIF + norm. duree)" },
+      { titre: "Comparaison", valeur: "4 algos", sous: "F1 macro, class_weight" },
+      { titre: "Modele retenu", valeur: "Foret Aleatoire", sous: "class_weight=balanced" },
+      { titre: "Evaluation", valeur: "F1 95.62%", sous: "119 080 train / 29 770 test" },
+    ],
+  },
+};
+
+function renderPipelineDiagram(domaine) {
+  const config = PIPELINE_DATA[domaine];
+  if (!config) return;
+  document.getElementById("pipeline-subtitle").textContent = config.sousTitre;
+
+  const largeurNoeud = 152, hauteurNoeud = 92, ecart = 26;
+  const largeurTotale = config.etapes.length * largeurNoeud + (config.etapes.length - 1) * ecart;
+  const hauteurSvg = 130;
+
+  let svg = `<svg viewBox="0 0 ${largeurTotale} ${hauteurSvg}" style="width:100%;height:auto;max-width:900px;display:block;margin:0 auto;">`;
+
+  config.etapes.forEach((etape, i) => {
+    const x = i * (largeurNoeud + ecart);
+    const y = 15;
+    const estDernier = i === config.etapes.length - 1;
+    const classeBoite = estDernier ? "pipeline-node-box highlight" : "pipeline-node-box";
+
+    svg += `
+      <rect x="${x}" y="${y}" width="${largeurNoeud}" height="${hauteurNoeud}" rx="10" class="${classeBoite}"/>
+      <text x="${x + largeurNoeud / 2}" y="${y + 22}" text-anchor="middle" class="pipeline-node-title">${etape.titre}</text>
+      <text x="${x + largeurNoeud / 2}" y="${y + 48}" text-anchor="middle" class="pipeline-node-value">${etape.valeur}</text>
+      <text x="${x + largeurNoeud / 2}" y="${y + 68}" text-anchor="middle" class="pipeline-node-sub">${etape.sous}</text>
+    `;
+
+    if (!estDernier) {
+      const xFleche = x + largeurNoeud;
+      const yMilieu = y + hauteurNoeud / 2;
+      svg += `
+        <line x1="${xFleche}" y1="${yMilieu}" x2="${xFleche + ecart - 8}" y2="${yMilieu}" class="pipeline-arrow"/>
+        <polygon points="${xFleche + ecart - 8},${yMilieu - 5} ${xFleche + ecart + 2},${yMilieu} ${xFleche + ecart - 8},${yMilieu + 5}" class="pipeline-arrow-head"/>
+      `;
+    }
+  });
+
+  svg += "</svg>";
+  document.getElementById("pipeline-svg-container").innerHTML = svg;
+}
+
 const DOMAIN_CONFIG = {
   reseau: {
     endpoint: "/organisation/dashboard_soc",
@@ -213,6 +288,7 @@ function renderSimpleView(data) {
 
 function renderTechnicalView(data) {
   currentDashboardData = data; // conserve pour le filtrage de date cote client (voir applyDateFilter)
+  renderPipelineDiagram(currentDomain);
 
   // ---- Jauge de score animee ----
   const circumference = 327; // 2 * PI * 52

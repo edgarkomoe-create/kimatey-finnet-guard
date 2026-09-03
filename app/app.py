@@ -1616,6 +1616,80 @@ def render_academic_view():
             else:
                 st.info("Aucune colonne numerique detectee dans ce fichier.")
 
+            st.markdown("---")
+            st.subheader("🧪 Atelier de modelisation low-code")
+            st.caption(
+                "Choisissez une colonne cible et un algorithme via des menus - aucune ligne de code "
+                "a ecrire. Un vrai modele est entraine et evalue sur VOS donnees importees, en toute "
+                "securite : cet atelier n'a jamais acces aux modeles de production de l'Espace "
+                "Organisation, il travaille uniquement sur le fichier que vous venez de charger."
+            )
+            toutes_colonnes = df_case.columns.tolist()
+            col_cible = st.selectbox("Colonne cible (ce que le modele doit predire)", toutes_colonnes, key="atelier_cible")
+            colonnes_predicteurs_dispo = [c for c in numeric_cols if c != col_cible]
+
+            if len(colonnes_predicteurs_dispo) < 1:
+                st.warning("Il faut au moins une colonne numerique predictrice (differente de la cible) pour entrainer un modele.")
+            elif df_case[col_cible].nunique() > 20:
+                st.warning(
+                    f"La colonne cible choisie a {df_case[col_cible].nunique()} valeurs distinctes - "
+                    "trop pour une classification simple. Choisissez une colonne avec moins de 20 categories."
+                )
+            else:
+                algo_choisi = st.selectbox(
+                    "Algorithme a essayer",
+                    ["Arbre de Decision", "Regression Logistique", "Foret Aleatoire"],
+                    key="atelier_algo",
+                )
+                predicteurs_choisis = st.multiselect(
+                    "Colonnes predictrices a utiliser", colonnes_predicteurs_dispo,
+                    default=colonnes_predicteurs_dispo[:min(5, len(colonnes_predicteurs_dispo))],
+                    key="atelier_predicteurs",
+                )
+
+                if st.button("🚀 Entrainer et evaluer", key="atelier_entrainer") and predicteurs_choisis:
+                    from sklearn.model_selection import train_test_split as tts_atelier
+                    from sklearn.preprocessing import StandardScaler as Scaler_atelier
+                    from sklearn.tree import DecisionTreeClassifier
+                    from sklearn.linear_model import LogisticRegression
+                    from sklearn.ensemble import RandomForestClassifier
+                    from sklearn.metrics import f1_score as f1_atelier, accuracy_score
+
+                    df_propre = df_case[predicteurs_choisis + [col_cible]].dropna()
+                    if len(df_propre) < 20:
+                        st.error("Pas assez de lignes completes (sans valeur manquante) pour entrainer un modele fiable.")
+                    else:
+                        X_at = df_propre[predicteurs_choisis]
+                        y_at = df_propre[col_cible]
+                        X_train_at, X_test_at, y_train_at, y_test_at = tts_atelier(
+                            X_at, y_at, test_size=0.2, random_state=42,
+                            stratify=y_at if y_at.nunique() > 1 and y_at.value_counts().min() >= 2 else None,
+                        )
+                        scaler_at = Scaler_atelier()
+                        X_train_scaled = scaler_at.fit_transform(X_train_at)
+                        X_test_scaled = scaler_at.transform(X_test_at)
+
+                        modeles_atelier = {
+                            "Arbre de Decision": DecisionTreeClassifier(random_state=42, class_weight="balanced"),
+                            "Regression Logistique": LogisticRegression(max_iter=1000, class_weight="balanced"),
+                            "Foret Aleatoire": RandomForestClassifier(n_estimators=100, random_state=42, class_weight="balanced"),
+                        }
+                        with st.spinner(f"Entrainement de {algo_choisi} sur vos donnees..."):
+                            modele_at = modeles_atelier[algo_choisi]
+                            modele_at.fit(X_train_scaled, y_train_at)
+                            y_pred_at = modele_at.predict(X_test_scaled)
+                            f1_at = f1_atelier(y_test_at, y_pred_at, average="macro")
+                            acc_at = accuracy_score(y_test_at, y_pred_at)
+
+                        rc1, rc2 = st.columns(2)
+                        rc1.markdown(kpi_card("🎯", "Exactitude (test)", f"{acc_at*100:.1f}%", level="good"), unsafe_allow_html=True)
+                        rc2.markdown(kpi_card("⚖️", "F1 macro (test)", f"{f1_at*100:.1f}%", level="good"), unsafe_allow_html=True)
+                        st.caption(
+                            f"Entraine sur {len(X_train_at)} lignes, evalue sur {len(X_test_at)} lignes "
+                            f"jamais vues a l'entrainement - exactement la meme discipline anti-fuite de "
+                            f"donnees que les modeles de production de ce projet."
+                        )
+
 
 # ==================================================================
 # Module Fraude Transactionnelle (PROTOTYPE) - design a deux niveaux de

@@ -119,6 +119,18 @@
 }
 .alert-toggle-btn:hover { border-color: var(--teal); color: var(--teal); }
 
+/* ---- Logigramme du pipeline (SVG artisanal, donnees reelles) ---- */
+.pipeline-subtitle { color: var(--text-muted); font-size: .85rem; margin: 0 0 1.2rem 0; }
+.pipeline-node-box {
+  fill: var(--navy-mid); stroke: rgba(0,212,181,0.35); stroke-width: 1.5;
+}
+.pipeline-node-box.highlight { fill: rgba(0,212,181,0.14); stroke: var(--teal); stroke-width: 2; }
+.pipeline-node-title { fill: var(--text-light); font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 13px; }
+.pipeline-node-value { fill: var(--teal); font-weight: 700; font-size: 15px; }
+.pipeline-node-sub { fill: var(--text-muted); font-size: 10.5px; }
+.pipeline-arrow { stroke: rgba(0,212,181,0.5); stroke-width: 2; fill: none; }
+.pipeline-arrow-head { fill: rgba(0,212,181,0.5); }
+
 /* ---- Commentaire IA (Lieutenant Cyber) ---- */
 .ai-comment {
   margin-top: .8rem; padding: 1rem 1.2rem; border-radius: 10px;
