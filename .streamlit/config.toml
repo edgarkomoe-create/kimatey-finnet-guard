@@ -8,3 +8,10 @@ font = "sans serif"
 
 [browser]
 gatherUsageStats = false
+
+[server]
+# Taille max explicite pour l'import de fichiers CSV (en Mo). Streamlit utilise
+# 200 Mo par defaut si non precise ici - on le rend explicite et plus genereux
+# (500 Mo) pour les gros fichiers IIoT/reseau, plutot que de dependre d'une
+# valeur implicite non documentee.
+maxUploadSize = 500
