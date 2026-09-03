@@ -6,3 +6,7 @@ node_modules/
 .DS_Store
 *.log
 .env
+
+# Fichiers d'etat runtime (journal d'alertes, repli JSON) - jamais versionnes,
+# regeneres localement ou vivent sur PostgreSQL/Neon en production.
+outputs/organisation_state*.json
