@@ -29,6 +29,24 @@ de donnees est disponible pour le domaine concerne.
 
 ## Domaines candidats
 
+### 0. Securite IIoT (EN COURS - le plus avance des candidats)
+- **Statut** : travail reel deja engage (notebook `Article_iiot.ipynb`), pas juste envisage.
+- **Donnees** : jeu de donnees IIoT reel (Datasense-IIoT-2025), 685 671 echantillons, 94 colonnes
+  brutes, 71 variables numeriques exploitables. Cible multi-classe riche (`label3`, ~33 familles
+  d'attaques : reconnaissance/scan, usurpation ARP/IP, Mirai (UDP/SYN flood), injection SQL/commande,
+  dictionary-ssh, floods varies sur ports 80/1883...) + `benign` a 58,4% (desequilibre raisonnable,
+  bien moins extreme que pour les transactions).
+- **Travail deja fait** : chargement/fusion de 20 fichiers CSV, EDA, verification des valeurs
+  manquantes, reduction de multicolinearite par VIF (Variance Inflation Factor) : 71 -> 41
+  predicteurs retenus (VIF < 10.0 pour tous), matrice de correlation residuelle verifiee.
+- **Reste a faire** : split train/test stratifie, standardisation (train uniquement - piege de
+  fuite de donnees a eviter, voir Partie 3.2 du document technique), comparaison d'algorithmes,
+  GridSearchCV, puis toute l'integration applicative (service de modele, endpoints API, module
+  Streamlit, entree dans core/schema_router.py, domaine dedie dans core/alert_log.py).
+- **Blocage actuel** : le jeu de donnees complet est trop volumineux a transferer tel quel ;
+  export d'un echantillon stratifie post-VIF (41 variables, quelques dizaines de milliers de
+  lignes) demande pour debloquer l'entrainement reel.
+
 ### 1. Classification de texte SMS (arnaque directement depuis le message)
 - **Ce qu'il ferait** : predire si un SMS/message est une arnaque a partir de son contenu textuel,
   plutot que de s'appuyer uniquement sur Gemini (voir discussion "Lieutenant Cyber utilise-t-il

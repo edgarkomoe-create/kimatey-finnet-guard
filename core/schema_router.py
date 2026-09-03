@@ -41,10 +41,14 @@ SCHEMAS = {
         "modele_disponible": True,
     },
     # "iot": {
-    #     "label": "Securite IoT Industrielle",
-    #     "description": "A definir - necessite un jeu de donnees complet et un
-    #                      pipeline d'entrainement dedie (voir docs/ROADMAP_MODELES_ADDITIONNELS.md)",
-    #     "features": [...],
+    #     "label": "Securite IIoT Industrielle",
+    #     "description": "Flux IIoT (Datasense-IIoT-2025) - 41 variables retenues apres reduction
+    #                      VIF (multicolinearite), cible multi-classe (~33 familles d'attaques :
+    #                      recon/scan, usurpation ARP/IP, Mirai, injection, floods varies + benign).
+    #                      Travail en cours - voir docs/ROADMAP_MODELES_ADDITIONNELS.md, section 0.
+    #                      A activer une fois le pipeline d'entrainement complet (src/iot_security/)
+    #                      et les artefacts (.joblib) disponibles.",
+    #     "features": [...],  # les 41 variables post-VIF, a lister une fois l'export recu
     #     "modele_disponible": False,
     # },
 }
