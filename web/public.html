@@ -236,7 +236,7 @@ document.getElementById("chat-image-input").addEventListener("change", async (e)
   const question = document.getElementById("chat-input").value.trim();
   if (question) formData.append("message", question);
   document.getElementById("chat-input").value = "";
-  const acctEmail = localStorage.getItem(PUBLIC_EMAIL_KEY) || "anonyme";
+  const acctEmail = localStorage.getItem(PUBLIC_EMAIL_KEY) || getOrCreateAnonId();
 
   try {
     const r = await fetch(API_BASE_URL + "/assistant/chat_image?account_id=" + encodeURIComponent(acctEmail), { method: "POST", body: formData });
@@ -827,6 +827,22 @@ async function loadReportSteps() {
 // ==========================================================================
 const PUBLIC_TOKEN_KEY = "kimatey_public_token";
 const PUBLIC_EMAIL_KEY = "kimatey_public_email";
+const PUBLIC_ANON_ID_KEY = "kimatey_public_anon_id";
+
+// CORRECTIF : sans identifiant individuel, tous les visiteurs sans compte
+// optionnel partageaient litteralement le meme quota ("anonyme") - un seul
+// visiteur epuisant les 5 images gratuites du mois bloquait TOUS les autres
+// visiteurs anonymes simultanement. Genere un identifiant unique par
+// navigateur (persistant via localStorage), pour que chaque visiteur ait
+// son propre quota, meme sans creer de compte.
+function getOrCreateAnonId() {
+  let anonId = localStorage.getItem(PUBLIC_ANON_ID_KEY);
+  if (!anonId) {
+    anonId = "anon_" + crypto.randomUUID();
+    localStorage.setItem(PUBLIC_ANON_ID_KEY, anonId);
+  }
+  return anonId;
+}
 
 function getPublicToken() { return localStorage.getItem(PUBLIC_TOKEN_KEY); }
 function setPublicSession(token, email) {
@@ -871,7 +887,7 @@ function renderAccount() {
 
   document.getElementById("account-register").addEventListener("click", () => submitAccount("register"));
   document.getElementById("account-login").addEventListener("click", () => submitAccount("login"));
-  renderPassStatus("anonyme");
+  renderPassStatus(getOrCreateAnonId());
 }
 
 // ==========================================================================
