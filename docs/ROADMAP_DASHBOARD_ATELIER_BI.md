@@ -1,5 +1,20 @@
 # Dashboard web vers un atelier BI visuel - feuille de route progressive
 
+## Decision de perimetre (a respecter dans les sessions futures)
+
+Une ambition plus large a ete evoquee en cours de projet : transformer l'outil en plateforme
+generaliste "Canva de la data visualisation/ML/DL" (comparable a Tableau, Power BI, DataRobot,
+Orange/KNIME). **Decision explicite, prise en connaissance de cause** : Kimatey FinNet Guard
+reste un outil **specialise** en cybersecurite reseau et fraude financiere - toute brique
+low-code/no-code ajoutee doit rester **ciblee sur ce domaine** (comme le Bac a Sable Data
+Learning et l'Atelier d'Experimentation, tous deux scoped a des jeux de donnees et pipelines
+du projet), jamais evoluer vers un produit generaliste de data science.
+
+Raison : le projet est un memoire Master 1 avec un superviseur, un article en cours de
+redaction et une soutenance a preparer - un perimetre coherent et defendable prime sur
+l'ambition produit. Si cette direction generaliste redevient une vraie envie, elle merite
+d'etre traitee comme une **initiative separee**, pas une extension du memoire actuel.
+
 ## Point de depart (livre ce soir)
 
 `web/dashboard.html` est deja un vrai outil de restitution BI (jauge, graphiques Chart.js
