@@ -403,7 +403,7 @@ class TestEspaceAcademique:
         assert len(mode_radio.options) == 3
         assert any("question" in opt.lower() for opt in mode_radio.options)
         assert any("quiz" in opt.lower() for opt in mode_radio.options)
-        assert any("jeu de donnees" in opt.lower() for opt in mode_radio.options)
+        assert any("bac a sable" in opt.lower() for opt in mode_radio.options)
 
     def test_mode_question_sans_cle_gemini_affiche_un_message_informatif(self, at):
         """Sans GEMINI_API_KEY configuree dans cet environnement de test, le
@@ -416,7 +416,7 @@ class TestEspaceAcademique:
     def test_mode_eda_affiche_un_uploader_de_fichier(self, at):
         _goto_academic(at)
         mode_radio = next(r for r in at.radio if r.label == "Mode")
-        eda_option = next(opt for opt in mode_radio.options if "jeu de donnees" in opt.lower())
+        eda_option = next(opt for opt in mode_radio.options if "bac a sable" in opt.lower())
         mode_radio.set_value(eda_option).run(timeout=60)
         assert not at.exception
         assert len(at.get("file_uploader")) >= 1

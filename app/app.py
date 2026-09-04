@@ -1384,13 +1384,13 @@ def render_reseau_module():
 
     # ---------------------------------------------------------------- Tab 7 : Visualisation (renvoi vers le web)
     with tab_viz:
-        st.markdown("### 📈 Dashboard visuel anime")
+        st.markdown("### 📈 Kimatey DataVisual Studio")
         st.write(
             "Retrouvez ce meme tableau de bord (score, alertes, tendances) dans une version web "
             "**interactive et animee** (jauge circulaire, courbes Chart.js) - memes donnees, "
             "presentation plus riche. Connectez-vous avec le meme compte."
         )
-        st.link_button("Ouvrir le Dashboard Visuel (Reseau) →", "https://kimatey-finnet-guard.vercel.app/dashboard.html?domaine=reseau",
+        st.link_button("Ouvrir le Kimatey DataVisual Studio (Reseau) →", "https://kimatey-finnet-guard.vercel.app/dashboard.html?domaine=reseau",
                         type="primary", width="content")
         st.caption(
             "ℹ️ Ce lien affiche uniquement les donnees Securite Reseau - des liens equivalents "
@@ -1504,7 +1504,7 @@ def render_academic_view():
         "connaissances avec un mini-quiz."
     )
     mode_academique = st.radio(
-        "Mode", ["💬 Poser une question", "📝 Mini-quiz", "🧪 Importer un jeu de donnees (cas d'etude)"],
+        "Mode", ["💬 Poser une question", "📝 Mini-quiz", "🧪 Bac a Sable Data Learning"],
         horizontal=True, key="academic_mode",
     )
 
@@ -1589,7 +1589,7 @@ def render_academic_view():
                 st.session_state.quiz_ml_answered = False
                 st.rerun()
 
-    else:  # Importer un jeu de donnees (cas d'etude)
+    else:  # Bac a Sable Data Learning
         st.caption(
             "Outil generique d'exploration statistique (EDA), decouple du modele de fraude Kimatey : "
             "importez n'importe quel fichier CSV (donnees de cours, jeu de donnees public...) pour "
@@ -1617,7 +1617,7 @@ def render_academic_view():
                 st.info("Aucune colonne numerique detectee dans ce fichier.")
 
             st.markdown("---")
-            st.subheader("🧪 Atelier de modelisation low-code")
+            st.subheader("🧪 Bac a Sable Data Learning")
             st.caption(
                 "Choisissez une colonne cible et un algorithme via des menus - aucune ligne de code "
                 "a ecrire. Un vrai modele est entraine et evalue sur VOS donnees importees, en toute "
@@ -1764,7 +1764,7 @@ def render_iot_module():
                         toggle_alert_status(alert["ID"], domaine="iot")
                         st.rerun()
 
-        st.link_button("📈 Ouvrir le Dashboard Visuel (IIoT) →",
+        st.link_button("📈 Ouvrir le Kimatey DataVisual Studio (IIoT) →",
                         "https://kimatey-finnet-guard.vercel.app/dashboard.html?domaine=iot")
         st.caption(
             "ℹ️ Ce lien affiche uniquement les donnees Securite IIoT, coherent avec le principe "
@@ -1929,7 +1929,7 @@ def render_transactions_module():
                         toggle_alert_status(alert["ID"], domaine="transactions")
                         st.rerun()
 
-        st.link_button("📈 Ouvrir le Dashboard Visuel (Transactions) →",
+        st.link_button("📈 Ouvrir le Kimatey DataVisual Studio (Transactions) →",
                         "https://kimatey-finnet-guard.vercel.app/dashboard.html?domaine=transactions")
         st.caption(
             "ℹ️ Ce lien affiche uniquement les donnees Transactions - le domaine Securite "
