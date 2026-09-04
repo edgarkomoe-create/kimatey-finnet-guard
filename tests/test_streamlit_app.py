@@ -400,7 +400,7 @@ class TestEspaceAcademique:
     def test_trois_modes_professeur_cyber_presents(self, at):
         _goto_academic(at)
         mode_radio = next(r for r in at.radio if r.label == "Mode")
-        assert len(mode_radio.options) == 3
+        assert len(mode_radio.options) == 4
         assert any("question" in opt.lower() for opt in mode_radio.options)
         assert any("quiz" in opt.lower() for opt in mode_radio.options)
         assert any("bac a sable" in opt.lower() for opt in mode_radio.options)

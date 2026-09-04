@@ -63,6 +63,7 @@ from core.export_enrichi import calculer_priorite, generer_recommandations_ia, c
 OUT_DIR = BASE_DIR / "outputs"
 MODEL_DIR = OUT_DIR / "models"
 OUT_DIR_TX = OUT_DIR / "transaction_fraud"
+OUT_DIR_IOT = OUT_DIR / "iot_security"
 DATA_DIR = BASE_DIR / "data"
 
 FEATURES = joblib.load(MODEL_DIR / "feature_names.joblib")
@@ -1504,7 +1505,7 @@ def render_academic_view():
         "connaissances avec un mini-quiz."
     )
     mode_academique = st.radio(
-        "Mode", ["💬 Poser une question", "📝 Mini-quiz", "🧪 Bac a Sable Data Learning"],
+        "Mode", ["💬 Poser une question", "📝 Mini-quiz", "🧪 Bac a Sable Data Learning", "🔬 Atelier d'Experimentation"],
         horizontal=True, key="academic_mode",
     )
 
@@ -1589,7 +1590,7 @@ def render_academic_view():
                 st.session_state.quiz_ml_answered = False
                 st.rerun()
 
-    else:  # Bac a Sable Data Learning
+    elif mode_academique == "🧪 Bac a Sable Data Learning":
         st.caption(
             "Outil generique d'exploration statistique (EDA), decouple du modele de fraude Kimatey : "
             "importez n'importe quel fichier CSV (donnees de cours, jeu de donnees public...) pour "
@@ -1689,6 +1690,53 @@ def render_academic_view():
                             f"jamais vues a l'entrainement - exactement la meme discipline anti-fuite de "
                             f"donnees que les modeles de production de ce projet."
                         )
+
+    else:  # Atelier d'Experimentation
+        st.caption(
+            "Testez de vraies variantes methodologiques sur un echantillon reel (6 000 lignes, "
+            "extrait du jeu de donnees Securite IIoT) - jamais sur le modele de production reellement "
+            "utilise par l'Espace Organisation. Illustre concretement le principe du \"harnais "
+            "ajustable\" (voir src/iot_security/train_pipeline.py) : la strategie de gestion du "
+            "desequilibre de classes est un parametre du pipeline, pas une decision figee dans le code."
+        )
+        strategies_choisies = st.multiselect(
+            "Strategie(s) a comparer", ["class_weight", "aucune"], default=["class_weight", "aucune"],
+            key="atelier_exp_strategies",
+        )
+        if st.button("🔬 Lancer la comparaison", key="lancer_experimentation") and strategies_choisies:
+            from src.iot_security.train_pipeline import load_data, preprocess, comparer_algorithmes
+            chemin_echantillon = OUT_DIR_IOT / "echantillon_experimentation.csv"
+            if not chemin_echantillon.exists():
+                st.error("Echantillon d'experimentation introuvable sur le serveur.")
+            else:
+                df_echantillon = load_data(str(chemin_echantillon))
+                X_train_exp, X_test_exp, y_train_exp, y_test_exp, _, _ = preprocess(df_echantillon)
+
+                resultats_par_strategie = {}
+                for strategie in strategies_choisies:
+                    with st.spinner(f"Comparaison d'algorithmes - strategie '{strategie}'..."):
+                        resultats_par_strategie[strategie] = comparer_algorithmes(X_train_exp, y_train_exp, strategie, cv=3)
+
+                st.markdown("### Resultats reels (F1 macro, validation croisee)")
+                if len(strategies_choisies) == 1:
+                    st.dataframe(resultats_par_strategie[strategies_choisies[0]], width="stretch")
+                else:
+                    cols_comparaison = st.columns(len(strategies_choisies))
+                    for i, strategie in enumerate(strategies_choisies):
+                        with cols_comparaison[i]:
+                            st.markdown(f"**Strategie : `{strategie}`**")
+                            st.dataframe(resultats_par_strategie[strategie], width="stretch")
+
+                    meilleur_par_strategie = {
+                        s: resultats_par_strategie[s].iloc[0]["F1_macro_CV_moyenne"] for s in strategies_choisies
+                    }
+                    strategie_gagnante = max(meilleur_par_strategie, key=meilleur_par_strategie.get)
+                    st.success(
+                        f"Sur cet echantillon, la strategie **`{strategie_gagnante}`** obtient le meilleur "
+                        f"F1 macro ({meilleur_par_strategie[strategie_gagnante]*100:.1f}%) - a titre "
+                        f"illustratif : le modele de production utilise l'echantillon complet (148 850 "
+                        f"lignes), pas ce sous-ensemble reduit a 6 000 lignes pour rester interactif ici."
+                    )
 
 
 # ==================================================================
