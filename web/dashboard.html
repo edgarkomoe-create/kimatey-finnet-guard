@@ -61,6 +61,7 @@
         <div class="view-toggle">
           <button class="view-toggle-btn active" data-view="simple">👔 Vue simple</button>
           <button class="view-toggle-btn" data-view="technique">🔬 Vue technique</button>
+          <button class="view-toggle-btn" data-view="globale" id="btn-vue-globale" style="display:none">🌍 Vision Globale</button>
         </div>
         <div class="refresh-row">
           <button class="btn secondary" id="btn-refresh">🔄 Actualiser</button>
@@ -75,6 +76,28 @@
       <div id="simple-summary" class="simple-summary"></div>
       <button class="btn secondary" id="btn-comment-executive" style="margin-top:1rem">🎖️ Demander un avis a Lieutenant Cyber</button>
       <div id="comment-executive" class="ai-comment"></div>
+    </div>
+
+    <!-- ---- Vue globale (multi-domaines, accessible uniquement en acces direct) ---- -->
+    <div id="view-globale" style="display:none">
+      <p class="pipeline-subtitle">Etat des 3 domaines en un coup d'oeil - vue de lecture uniquement, ne remplace pas les vues detaillees par domaine.</p>
+      <div class="globale-grid" id="globale-grid">
+        <div class="globale-card" data-domaine="reseau">
+          <div class="globale-card-header">🌐 Securite Reseau</div>
+          <div class="globale-score" id="globale-score-reseau">--</div>
+          <div class="globale-sub" id="globale-sub-reseau">Chargement...</div>
+        </div>
+        <div class="globale-card" data-domaine="transactions">
+          <div class="globale-card-header">💰 Fraude Transactionnelle</div>
+          <div class="globale-score" id="globale-score-transactions">--</div>
+          <div class="globale-sub" id="globale-sub-transactions">Chargement...</div>
+        </div>
+        <div class="globale-card" data-domaine="iot">
+          <div class="globale-card-header">🏭 Securite IIoT</div>
+          <div class="globale-score" id="globale-score-iot">--</div>
+          <div class="globale-sub" id="globale-sub-iot">Chargement...</div>
+        </div>
+      </div>
     </div>
 
     <!-- ---- Vue technique ---- -->
@@ -140,6 +163,11 @@
           <label>Periode : <input type="date" id="filter-date-start"></label>
           <label>a <input type="date" id="filter-date-end"></label>
           <button class="btn secondary" id="filter-date-reset">Reinitialiser</button>
+        </div>
+        <div class="severity-filter-row" id="severity-filter-row">
+          <label><input type="checkbox" class="severity-checkbox" value="Critique" checked> 🔴 Critique</label>
+          <label><input type="checkbox" class="severity-checkbox" value="Elevee" checked> 🟠 Elevee</label>
+          <label><input type="checkbox" class="severity-checkbox" value="Moyenne" checked> 🟡 Moyenne</label>
         </div>
         <div id="alert-list"></div>
       </div>

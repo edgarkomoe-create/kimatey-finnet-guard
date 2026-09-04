@@ -131,6 +131,22 @@
 .pipeline-arrow { stroke: rgba(0,212,181,0.5); stroke-width: 2; fill: none; }
 .pipeline-arrow-head { fill: rgba(0,212,181,0.5); }
 
+/* ---- Vue Globale (multi-domaines) ---- */
+.globale-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.2rem; }
+@media (max-width: 900px) { .globale-grid { grid-template-columns: 1fr; } }
+.globale-card {
+  background: var(--navy-light); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px;
+  padding: 1.4rem; text-align: center; transition: transform .2s ease, border-color .2s ease;
+}
+.globale-card:hover { transform: translateY(-3px); border-color: rgba(0,212,181,0.3); }
+.globale-card-header { font-size: .92rem; font-weight: 700; color: var(--text-light); margin-bottom: .8rem; }
+.globale-score { font-family: "Space Grotesk", sans-serif; font-size: 2.4rem; font-weight: 700; margin-bottom: .3rem; }
+.globale-sub { font-size: .8rem; color: var(--text-muted); }
+
+/* ---- Filtre de gravite (journal des alertes) ---- */
+.severity-filter-row { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; font-size: .85rem; color: var(--text-muted); }
+.severity-filter-row label { display: flex; align-items: center; gap: .35rem; cursor: pointer; }
+
 /* ---- Commentaire IA (Lieutenant Cyber) ---- */
 .ai-comment {
   margin-top: .8rem; padding: 1rem 1.2rem; border-radius: 10px;

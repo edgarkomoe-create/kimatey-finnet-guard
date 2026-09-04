@@ -184,15 +184,17 @@ document.getElementById("register-submit").addEventListener("click", () => {
 });
 
 // ==========================================================================
-// Bascule vue simple / technique
+// Bascule vue simple / technique / globale
 // ==========================================================================
 document.querySelectorAll(".view-toggle-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".view-toggle-btn").forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
-    const isSimple = btn.dataset.view === "simple";
-    document.getElementById("view-simple").style.display = isSimple ? "block" : "none";
-    document.getElementById("view-technique").style.display = isSimple ? "none" : "block";
+    const vue = btn.dataset.view;
+    document.getElementById("view-simple").style.display = vue === "simple" ? "block" : "none";
+    document.getElementById("view-technique").style.display = vue === "technique" ? "block" : "none";
+    document.getElementById("view-globale").style.display = vue === "globale" ? "block" : "none";
+    if (vue === "globale") chargerVueGlobale();
   });
 });
 
@@ -222,6 +224,11 @@ if (urlDomain === "reseau" || urlDomain === "transactions" || urlDomain === "iot
   currentDomain = urlDomain;
   document.getElementById("header-eyebrow").innerHTML = DOMAIN_CONFIG[currentDomain].eyebrow;
   document.querySelector(".domain-toggle").style.display = "none";
+} else {
+  // Acces direct (pas de contexte de domaine impose) : la Vision Globale multi-domaines
+  // devient pertinente - elle reste masquee en cas de verrouillage strict, coherent avec
+  // le principe d'isolation des domaines etabli plus tot.
+  document.getElementById("btn-vue-globale").style.display = "inline-block";
 }
 
 // ==========================================================================
@@ -342,7 +349,7 @@ function renderTechnicalView(data) {
   });
 
   renderTimelineChart(data.day_severity_series);
-  renderAlertList(data.alerts);
+  applyDateFilter(); // applique les filtres deja actifs (date + gravite) plutot que tout reafficher
 }
 
 // ---- Graphique chronologie multi-gravite (courbes), extrait en fonction separee
@@ -431,13 +438,17 @@ function applyDateFilter() {
 
   let filteredAlerts = currentDashboardData.alerts;
   if (startStr || endStr) {
-    filteredAlerts = currentDashboardData.alerts.filter((a) => {
+    filteredAlerts = filteredAlerts.filter((a) => {
       const day = a.Horodatage.slice(0, 10);
       if (startStr && day < startStr) return false;
       if (endStr && day > endStr) return false;
       return true;
     });
   }
+
+  const niveauxCoches = Array.from(document.querySelectorAll(".severity-checkbox:checked")).map((cb) => cb.value);
+  filteredAlerts = filteredAlerts.filter((a) => niveauxCoches.includes(deduireNiveauGravite(a.Menace)));
+
   renderAlertList(filteredAlerts);
 }
 
@@ -515,6 +526,51 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && getToken()) {
     loadDashboardData(); // rafraichit immediatement au retour sur l'onglet
   }
+});
+
+// ==========================================================================
+// Demarrage
+// ==========================================================================
+// Vue Globale : recupere les 3 domaines en parallele, affiche les scores
+// cote a cote. Lecture seule - aucune action possible depuis cette vue.
+// ==========================================================================
+async function chargerVueGlobale() {
+  const domaines = ["reseau", "transactions", "iot"];
+  await Promise.all(domaines.map(async (d) => {
+    const scoreEl = document.getElementById("globale-score-" + d);
+    const subEl = document.getElementById("globale-sub-" + d);
+    try {
+      const r = await fetch(API_BASE_URL + DOMAIN_CONFIG[d].endpoint, {
+        headers: { Authorization: "Bearer " + getToken() },
+      });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const data = await r.json();
+      const couleur = data.score >= 70 ? "#22c55e" : (data.score >= 40 ? "#f5a524" : "#e74c3c");
+      scoreEl.textContent = data.score + "/100";
+      scoreEl.style.color = couleur;
+      subEl.textContent = data.n_open + " alerte(s) ouverte(s) - " + data.treated_rate_pct + "% traite";
+    } catch (e) {
+      scoreEl.textContent = "N/A";
+      subEl.textContent = "Indisponible";
+    }
+  }));
+}
+
+// ==========================================================================
+// Filtre de gravite (journal des alertes) : deduit un niveau (Critique/
+// Elevee/Moyenne) a partir de la categorie de menace, coherent avec les
+// couleurs SEVERITY_COLORS deja utilisees pour les graphiques.
+// ==========================================================================
+function deduireNiveauGravite(menace) {
+  const critiques = ["Infiltration / Brute-Force / Exfiltration", "mitm", "malware"];
+  const elevees = ["Attaque DDoS / Volumetrique", "ddos", "dos"];
+  if (critiques.includes(menace)) return "Critique";
+  if (elevees.includes(menace)) return "Elevee";
+  return "Moyenne";
+}
+
+document.querySelectorAll(".severity-checkbox").forEach((cb) => {
+  cb.addEventListener("change", applyDateFilter); // reutilise le meme pipeline de filtrage/rendu
 });
 
 // ==========================================================================
